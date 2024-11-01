@@ -1,9 +1,11 @@
 # Collisionless Shock Simulation using Particle-in-Cell (PIC) Method
 
 ### Author
-Harikrishnan Aravindakshan, Reda Elassooudi, Siæom Desimpelaere, Bodhisatwa Datta, Robbe Alliet
+
+Harikrishnan Aravindakshan, Reda Elassooudi, Simon Desimpelaere, Bodhisatwa Datta, Robbe Alliet
 
 ### Last Updated
+
 November 1, 2024
 
 ---
@@ -33,22 +35,28 @@ The simulation works through the following main stages:
 ## Key Improvements Implemented
 
 ### 1. Accurate Potential Calculation
-   - Enhanced by replacing simple cumulative sums with methods like Successive Over-Relaxation (SOR) and Fast Fourier Transform (FFT), improving electric field accuracy and energy conservation.
+
+- Enhanced by replacing simple cumulative sums with methods like Successive Over-Relaxation (SOR) and Fast Fourier Transform (FFT), improving electric field accuracy and energy conservation.
 
 ### 2. Cloud-In-Cell (CIC) Weighting for Charge Assignment
-   - Improved charge density distribution using CIC, which reduces numerical noise compared to the Nearest Grid Point (NGP) method.
+
+- Improved charge density distribution using CIC, which reduces numerical noise compared to the Nearest Grid Point (NGP) method.
 
 ### 3. Linear Electric Field Interpolation
-   - Applied a linear interpolation of electric field values at particle positions to smoothen force calculations and improve consistency with CIC weighting.
+
+- Applied a linear interpolation of electric field values at particle positions to smoothen force calculations and improve consistency with CIC weighting.
 
 ### 4. Energy Conservation with Leapfrog Integration
-   - Incorporated a leapfrog integration scheme to better conserve total energy throughout the simulation, enhancing numerical stability.
+
+- Incorporated a leapfrog integration scheme to better conserve total energy throughout the simulation, enhancing numerical stability.
 
 ### 5. Boundary Conditions
-   - Implemented open or absorbing boundaries to prevent artificial reflections, with options for outflow of particles or damping zones.
+
+- Implemented open or absorbing boundaries to prevent artificial reflections, with options for outflow of particles or damping zones.
 
 ### 6. Random Seed for Reproducibility
-   - Set a random seed for consistent results across runs, aiding in debugging and result validation.
+
+- Set a random seed for consistent results across runs, aiding in debugging and result validation.
 
 ---
 
@@ -57,9 +65,10 @@ The simulation works through the following main stages:
 The project extends to study fundamental plasma instabilities such as **two-stream** and **bump-on-tail** instabilities:
 
 1. **Two-Stream Instability**: Caused by two opposing particle streams, leading to wave amplification.
-   - Modifications include initializing particle velocities in opposite directions, setting periodic boundary conditions, and adjusting time and space resolution to capture instability growth.
 
+   - Modifications include initializing particle velocities in opposite directions, setting periodic boundary conditions, and adjusting time and space resolution to capture instability growth.
 2. **Bump-on-Tail Instability**: Triggered by a high-velocity particle surplus on the tail of the velocity distribution, leading to wave growth due to inverse Landau damping.
+
    - The electron distribution is modified to include a "bump," while diagnostics track wave amplification and distribution flattening.
 
 ---
@@ -67,9 +76,11 @@ The project extends to study fundamental plasma instabilities such as **two-stre
 ## Getting Started
 
 ### Prerequisites
+
 - **Python 3.x** and libraries: `numpy`, `matplotlib`.
 
 ### Installation
+
 1. Clone the repository:
    ```bash
    git clone https://github.com/username/repo-name.git
@@ -80,6 +91,7 @@ The project extends to study fundamental plasma instabilities such as **two-stre
    ```
 
 ### Running the Simulation
+
 1. Open the main script (e.g., `collisionless_shock_simulation.py`).
 2. Set parameters in the `Simulation Parameters` section.
 3. Run the script:
@@ -108,6 +120,7 @@ The project extends to study fundamental plasma instabilities such as **two-stre
 ---
 
 ## References
+
 - Birdsall, C.K., & Langdon, A.B. *Plasma Physics via Computer Simulation.*
 - Hockney, R.W., & Eastwood, J.W. *Computer Simulation Using Particles.*
 - Nicholson, D.R. *Introduction to Plasma Theory.*

@@ -111,7 +111,3 @@ The project extends to study fundamental plasma instabilities such as **two-stre
 - Birdsall, C.K., & Langdon, A.B. *Plasma Physics via Computer Simulation.*
 - Hockney, R.W., & Eastwood, J.W. *Computer Simulation Using Particles.*
 - Nicholson, D.R. *Introduction to Plasma Theory.*
-
----
-
-This README provides an essential guide for users and developers, helping them understand, execute, and explore the simulation’s potential for plasma physics research.

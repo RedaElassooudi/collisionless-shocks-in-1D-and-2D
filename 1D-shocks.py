@@ -10,17 +10,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
+
+
 # Simulation parameters
 num_particles = 20000       # Total number of particles (ions + electrons)
 num_cells = 200             # Number of spatial grid cells
-dx = 1.0                    # Spatial step size
-dt = 0.1                    # Time step
 num_steps = 1000            # Number of time steps
 qm_e = -1.0                 # Charge-to-mass ratio for electrons
 qm_i = 1.0                  # Charge-to-mass ratio for ions
 v_te = 1.0                  # Thermal velocity for electrons
 v_ti = 0.1                  # Thermal velocity for ions
 x_max = num_cells * dx      # Maximum position value
+dx = 1.0                    # Spatial step size
 
 # Shock generation parameters
 bulk_velocity_e = 2.0       # Bulk velocity for electrons (towards left)
@@ -37,6 +38,57 @@ v_i_history = []
 kinetic_energy_history = []
 potential_energy_history = []
 total_energy_history = []
+
+# Function thqt determines the optimql timestep based on the CFL condition and the plasma frequency condition
+def calculate_max_timestep(dx, v_te, qm_e):
+    # CFL condition (particle shouldn't cross more than one cell per timestep)
+    dt_cfl = dx / (5.0 * v_te)  # Factor 5 for safety
+    
+    # Plasma frequency condition
+    wp = np.sqrt(abs(qm_e))  # Plasma frequency (normalized units)
+    dt_wp = 0.2 / wp  # Factor 0.2 for stability
+    
+    # Return the more restrictive timestep
+    return min(dt_cfl, dt_wp)
+
+#Function to properly initialize velocities for the leapfrog scheme at t-dt/2.
+def initialize_velocities_half_step(x_e, v_e, x_i, v_i, qm_e, qm_i, dt, dx, num_cells):
+    """
+    
+    """
+    # Calculate initial electric field
+    rho = np.zeros(num_cells)
+    
+    # Charge assignment
+    idx_e = (x_e / dx).astype(int) % num_cells
+    idx_i = (x_i / dx).astype(int) % num_cells
+    np.add.at(rho, idx_e, qm_e)
+    np.add.at(rho, idx_i, qm_i)
+    
+    # Solve for initial electric field
+    phi = np.zeros(num_cells)
+    rho_mean = np.mean(rho)
+    rho_tilde = rho - rho_mean
+    
+    phi[1:] = np.cumsum(rho_tilde[:-1]) * dx ** 2
+    
+    # Electric field calculation
+    E = np.zeros(num_cells)
+    E[:-1] = -(phi[1:] - phi[:-1]) / dx
+    E[-1] = -(phi[0] - phi[-1]) / dx
+    
+    # Get field at particle positions
+    E_e = E[idx_e]
+    E_i = E[idx_i]
+    
+    # Push velocities back half timestep
+    v_e_half = v_e - 0.5 * qm_e * E_e * dt
+    v_i_half = v_i - 0.5 * qm_i * E_i * dt
+    
+    return v_e_half, v_i_half
+
+dt = calculate_max_timestep(dx, v_te, qm_e) # Time step
+print(f"Using timestep: {dt}")     
 
 # Initialize particle positions and velocities with a bulk flow
 def initialize_particles():

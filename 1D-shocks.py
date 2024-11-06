@@ -20,8 +20,8 @@ qm_e = -1.0                 # Charge-to-mass ratio for electrons
 qm_i = 1.0                  # Charge-to-mass ratio for ions
 v_te = 1.0                  # Thermal velocity for electrons
 v_ti = 0.1                  # Thermal velocity for ions
-x_max = num_cells * dx      # Maximum position value
 dx = 1.0                    # Spatial step size
+x_max = num_cells * dx      # Maximum position value
 
 # Shock generation parameters
 bulk_velocity_e = 2.0       # Bulk velocity for electrons (towards left)
@@ -114,76 +114,73 @@ def initialize_particles():
 def run_simulation():
     # Initialize particles
     x_e, v_e, x_i, v_i = initialize_particles()
-
+    
+    # Initialize velocities at half timestep (v^(-1/2))
+    v_e, v_i = initialize_velocities_half_step(x_e, v_e, x_i, v_i, qm_e, qm_i, dt, dx, num_cells)
+    
     # Spatial grid
-    x_grid = np.linspace(0, x_max, num_cells + 1)[:-1]  # Grid cell centers
+    x_grid = np.linspace(0, x_max, num_cells + 1)[:-1]
     rho = np.zeros(num_cells)
     E = np.zeros(num_cells)
-
+    
     for step in range(num_steps):
-        # Charge assignment (NGP scheme)
-        rho.fill(0)
-        # Electrons
-        idx_e = (x_e / dx).astype(int) % num_cells
-        np.add.at(rho, idx_e, qm_e)
-        # Ions
-        idx_i = (x_i / dx).astype(int) % num_cells
-        np.add.at(rho, idx_i, qm_i)
-
-        # Solve Poisson's equation (Finite Difference Method)
-        phi = np.zeros(num_cells)
-        E = np.zeros(num_cells)
-        rho_mean = np.mean(rho)
-        rho_tilde = rho - rho_mean  # Neutralize the plasma
-
-        # Simple cumulative sum to approximate potential with reflecting boundary
-        phi = np.zeros(num_cells)
-        phi[1:] = np.cumsum(rho_tilde[:-1]) * dx ** 2
-        phi[0] = 0  # Reference potential at the reflecting boundary
-
-        # Electric field calculation
-        E[:-1] = -(phi[1:] - phi[:-1]) / dx
-        E[-1] = -(phi[0] - phi[-1]) / dx  # Reflecting boundary condition
-
-        # Gather electric field at particle positions
-        E_e = E[idx_e]
-        E_i = E[idx_i]
-
-        # Update velocities
-        v_e += qm_e * E_e * dt
-        v_i += qm_i * E_i * dt
-
-        # Update positions
+        # Position update (x^(n+1) = x^n + v^(n+1/2) * dt)
         x_e += v_e * dt
         x_i += v_i * dt
-
-        # Apply reflecting boundary conditions at x=0 (left boundary)
+        
+        # Apply boundary conditions
         # Reflect particles that move beyond x=0
         mask_e_left = x_e < 0
         v_e[mask_e_left] = -v_e[mask_e_left]
         x_e[mask_e_left] = -x_e[mask_e_left]
-
+        
         mask_i_left = x_i < 0
         v_i[mask_i_left] = -v_i[mask_i_left]
         x_i[mask_i_left] = -x_i[mask_i_left]
-
-        # Apply periodic boundary conditions at x_max (right boundary)
+        
+        # Apply periodic boundary conditions at x_max
         x_e = x_e % x_max
         x_i = x_i % x_max
-
-        # Compute densities for diagnostics
+        
+        # Charge assignment (NGP scheme)
+        rho.fill(0)
+        idx_e = (x_e / dx).astype(int) % num_cells
+        idx_i = (x_i / dx).astype(int) % num_cells
+        np.add.at(rho, idx_e, qm_e)
+        np.add.at(rho, idx_i, qm_i)
+        
+        # Solve Poisson's equation
+        phi = np.zeros(num_cells)
+        rho_mean = np.mean(rho)
+        rho_tilde = rho - rho_mean
+        
+        phi[1:] = np.cumsum(rho_tilde[:-1]) * dx ** 2
+        
+        # Electric field calculation
+        E[:-1] = -(phi[1:] - phi[:-1]) / dx
+        E[-1] = -(phi[0] - phi[-1]) / dx
+        
+        # Gather electric field at particle positions
+        E_e = E[idx_e]
+        E_i = E[idx_i]
+        
+        # Velocity update (v^(n+3/2) = v^(n+1/2) + q/m * E^(n+1) * dt)
+        v_e += qm_e * E_e * dt
+        v_i += qm_i * E_i * dt
+        
+        # Compute diagnostics
         density_e = np.zeros(num_cells)
         density_i = np.zeros(num_cells)
         np.add.at(density_e, idx_e, 1)
         np.add.at(density_i, idx_i, 1)
-
-        # Compute energies
+        
+        # Compute energies (use v^(n+1/2) for kinetic energy)
         kinetic_energy_e = 0.5 * np.sum(v_e ** 2)
         kinetic_energy_i = 0.5 * np.sum(v_i ** 2)
         total_kinetic_energy = kinetic_energy_e + kinetic_energy_i
         potential_energy = 0.5 * np.sum(E ** 2) * dx
         total_energy = total_kinetic_energy + potential_energy
-
+        
         # Store diagnostics every 10 steps
         if step % 10 == 0:
             E_history.append(E.copy())
@@ -196,11 +193,12 @@ def run_simulation():
             kinetic_energy_history.append(total_kinetic_energy)
             potential_energy_history.append(potential_energy)
             total_energy_history.append(total_energy)
-
+        
         # Optional: Print progress
         if step % 100 == 0:
             print(f"Step {step}/{num_steps}")
-
+            print(f"Total Energy: {total_energy:.6f}")
+    
     return x_e, v_e, x_i, v_i, E_history
 
 # Run the simulation

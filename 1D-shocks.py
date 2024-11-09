@@ -9,6 +9,7 @@ Created on Fri Oct 25 11:46:16 2024
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import random
 
 
 # Simulation parameters
@@ -21,6 +22,9 @@ v_te = 1.0  # Thermal velocity for electrons
 v_ti = 0.1  # Thermal velocity for ions
 dx = 1.0  # Spatial step size
 x_max = num_cells * dx  # Maximum position value
+damping_width = x_max//10   # Size of region where dampening will occur
+random.seed (42)            #set the random seed 
+np.random.seed (42)         # Replace 42 with any integer
 
 # Shock generation parameters
 bulk_velocity_e = 2.0  # Bulk velocity for electrons (towards left)
@@ -54,7 +58,6 @@ def calculate_max_timestep(dx, v_te, qm_e):
 
 # Function to properly initialize velocities for the leapfrog scheme at t-dt/2.
 def initialize_velocities_half_step(x_e, v_e, x_i, v_i, qm_e, qm_i, dt, dx, num_cells):
-    """ """
     # Calculate initial electric field
     rho = np.zeros(num_cells)
 
@@ -112,8 +115,15 @@ def initialize_particles():
     return x_e, v_e, x_i, v_i
 
 
+def apply_damping(x , v , x_boundary , width ) :
+    damping_region = ( x >= x_boundary ) & ( x <= x_boundary + width )
+    damping_factor = np . linspace (1 , 0 , np .sum ( damping_region ) )
+    v [ damping_region ] *= damping_factor
+    return v
+
+
 # Main simulation function
-def run_simulation():
+def run_simulation(bound_cond=0):
     # Initialize particles
     x_e, v_e, x_i, v_i = initialize_particles()
 
@@ -133,18 +143,62 @@ def run_simulation():
         x_i += v_i * dt
 
         # Apply boundary conditions
-        # Reflect particles that move beyond x=0
-        mask_e_left = x_e < 0
-        v_e[mask_e_left] = -v_e[mask_e_left]
-        x_e[mask_e_left] = -x_e[mask_e_left]
+        # check the type of boundary condition to be used
+        if bound_cond == 0:
+            # remove electrons beyond x = 0
+            mask_e = (x_e > 0) #indexes of particles inside system
+            v_e = v_e[mask_e]
+            x_e = x_e[mask_e]
 
-        mask_i_left = x_i < 0
-        v_i[mask_i_left] = -v_i[mask_i_left]
-        x_i[mask_i_left] = -x_i[mask_i_left]
+            # remove ions beyond x = 0
+            mask_i = (x_i > 0)
+            v_i = v_i[mask_i]
+            x_i = x_i[mask_i]
 
-        # Apply periodic boundary conditions at x_max
-        x_e = x_e % x_max
-        x_i = x_i % x_max
+            #check how many electrons were removed 
+            num_e = len(x_e)
+            removed_e = num_particles // 2 - num_e
+            if removed_e != 0:
+                # if electrons were removed create new electrons by sampling from existing list
+                rand_ints_e = random.choices(range(num_e), k=removed_e)
+                new_x_e = np.array([x_e[i] + np.random.uniform(-5, 5)*dx for i in rand_ints_e])
+                new_v_e = np.array([v_e[i] for i in rand_ints_e])
+
+                #add these electrons to the old ones
+                x_e = np.concatenate((x_e, new_x_e))
+                v_e = np.concatenate((v_e, new_v_e))
+
+            #check how many ions were removed 
+            num_i = len(x_i)
+            removed_i = num_particles // 2 - num_i
+            if removed_i != 0:
+                # if ions were removed create new ions by sampling from existing list
+                rand_ints_i = random.choices(range(num_i), k=removed_i)
+                new_x_i = np.array([x_i[i] + np.random.uniform(-5, 5)*dx for i in rand_ints_i])
+                new_v_i = np.array([v_i[i] for i in rand_ints_i])
+
+                #add these ions to the old ones
+                x_i = np.concatenate((x_i, new_x_i))
+                v_i = np.concatenate((v_i, new_v_i))
+
+            # Apply periodic boundary conditions at x_max (right boundary)
+            x_e = x_e % x_max
+            x_i = x_i % x_max
+
+        if bound_cond == 1:
+            v_e = apply_damping ( x_e , v_e , x_boundary=0 , width = damping_width )
+
+            # Apply periodic boundary conditions at x_max (right boundary)
+            x_e = x_e % x_max
+            x_i = x_i % x_max
+
+        if bound_cond == 2:
+            mask_e = (x_e < 0) #indexes of electrons outside system
+            x_e[mask_e] = x_e[mask_e] + x_max
+
+            # Apply periodic boundary conditions at x_max (right boundary)
+            x_e = x_e % x_max
+            x_i = x_i % x_max
 
         # Charge assignment (Cloud in Cell scheme)
         # NOTE: I think it's best to always do this AFTER applying B.C. (negative x's might give troubles)
@@ -164,6 +218,7 @@ def run_simulation():
         rho_tilde = rho - rho_mean
 
         phi[1:] = np.cumsum(rho_tilde[:-1]) * dx**2
+        phi[0] = 3 * phi[1] - 3 * phi[2] + phi[3] 
 
         # Electric field calculation
         E[:-1] = -(phi[1:] - phi[:-1]) / dx
@@ -212,7 +267,8 @@ def run_simulation():
 
 
 # Run the simulation
-x_e, v_e, x_i, v_i, E_history = run_simulation()
+#bound_cond: 0 = 'Open', 1 = 'Absorbing', 2 = 'Periodic'
+x_e, v_e, x_i, v_i, E_history = run_simulation(bound_cond=2)
 
 
 # Plotting functions

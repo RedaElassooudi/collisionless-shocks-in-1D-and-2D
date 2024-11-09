@@ -60,12 +60,12 @@ def solve_poisson_sor(
         phi[0] = phi[1]  # Reflecting boundary at x=0
         phi[-1] = phi[0]  # Periodic boundary at x=x_max
 
-        # Check for convergence
-        if max_error < tol:
-            print(f"SOR converged in {iter_num + 1} iterations.")
-            break
-    else:
-        print("increase number of iterations to converge")
+    # #uncomment tocheck for convergence
+    #     if max_error < tol:
+    #         print(f"SOR converged in {iter_num + 1} iterations.")
+    #         break
+    # else:
+    #     print("increase number of iterations to converge")
 
     return phi
 

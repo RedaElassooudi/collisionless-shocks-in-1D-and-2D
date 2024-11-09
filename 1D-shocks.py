@@ -54,12 +54,12 @@ def solve_poisson_sor(rho_tilde, dx, max_iter=1000, tol=1e-6, omega=1.5): #max_i
         phi[0] = phi[1]               # Reflecting boundary at x=0
         phi[-1] = phi[0]              # Periodic boundary at x=x_max
 
-        # Check for convergence
-        if max_error < tol:
-            print(f"SOR converged in {iter_num + 1} iterations.")
-            break
-    else:
-        print("increase number of iterations to converge")
+    # #uncomment tocheck for convergence
+    #     if max_error < tol:
+    #         print(f"SOR converged in {iter_num + 1} iterations.")
+    #         break
+    # else:
+    #     print("increase number of iterations to converge")
     
     return phi
 '''update ends here'''

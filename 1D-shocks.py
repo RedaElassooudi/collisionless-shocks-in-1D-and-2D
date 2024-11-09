@@ -38,12 +38,13 @@ kinetic_energy_history = []
 potential_energy_history = []
 total_energy_history = []
 
-"""Update for the SOR process for the electric field"""
-
 
 def solve_poisson_sor(
     rho_tilde, dx, max_iter=1000, tol=1e-6, omega=1.5
 ):  # max_iter is numer of iterations, tol is error tollerance, omega is relaxation factor
+    """
+    Update for the SOR process for the electric field
+    """
     num_cells = len(rho_tilde)
     phi = np.zeros(num_cells)  # Initialize potential array
 
@@ -68,9 +69,6 @@ def solve_poisson_sor(
     #     print("increase number of iterations to converge")
 
     return phi
-
-
-"""update ends here"""
 
 
 # Initialize particle positions and velocities with a bulk flow
@@ -114,25 +112,12 @@ def run_simulation():
         idx_i = (x_i / dx).astype(int) % num_cells
         np.add.at(rho, idx_i, qm_i)
 
-        # '''remove
-        #         # Solve Poisson's equation (Finite Difference Method)
-        #         phi = np.zeros(num_cells)
-        #         E = np.zeros(num_cells)
-        # remove'''
-
         # Neutralize the plasma
         rho_mean = np.mean(rho)
         rho_tilde = rho - rho_mean
 
         # Solve for the electric potential using SOR
         phi = solve_poisson_sor(rho_tilde, dx)
-
-        # '''remove
-        #         # Simple cumulative sum to approximate potential with reflecting boundary
-        #         phi = np.zeros(num_cells)
-        #         phi[1:] = np.cumsum(rho_tilde[:-1]) * dx ** 2
-        #         phi[0] = 0  # Reference potential at the reflecting boundary
-        # remove'''
 
         # Electric field calculation
         E[:-1] = -(phi[1:] - phi[:-1]) / dx

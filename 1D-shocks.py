@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import random
 
-
 # Simulation parameters
 num_particles = 20000  # Total number of particles (ions + electrons)
 num_cells = 200  # Number of spatial grid cells

@@ -21,9 +21,9 @@ v_te = 1.0  # Thermal velocity for electrons
 v_ti = 0.1  # Thermal velocity for ions
 dx = 1.0  # Spatial step size
 x_max = num_cells * dx  # Maximum position value
-damping_width = x_max//10   # Size of region where dampening will occur
-random.seed (42)            #set the random seed 
-np.random.seed (42)         # Replace 42 with any integer
+damping_width = x_max // 10  # Size of region where dampening will occur
+random.seed(42)  # set the random seed
+np.random.seed(42)  # Replace 42 with any integer
 
 # Shock generation parameters
 bulk_velocity_e = 2.0  # Bulk velocity for electrons (towards left)
@@ -42,7 +42,41 @@ potential_energy_history = []
 total_energy_history = []
 
 
-# Function thqt determines the optimql timestep based on the CFL condition and the plasma frequency condition
+def solve_poisson_sor(
+    rho_tilde, dx, max_iter=1000, tol=1e-6, omega=1.5
+):  # max_iter is number of iterations, tol is error tollerance, omega is relaxation factor
+    """
+    Update for the SOR process for the electric field
+    """
+    num_cells = len(rho_tilde)
+    phi = np.zeros(num_cells)  # Initialize potential array
+
+    for iter_num in range(max_iter):
+        max_error = 0
+        for i in range(1, num_cells - 1):  # Inner grid points
+            old_phi = phi[i]
+            phi[i] = (1 - omega) * phi[i] + (omega / 2) * (
+                phi[i + 1] + phi[i - 1] - dx**2 * rho_tilde[i]
+            )
+            max_error = max(max_error, abs(phi[i] - old_phi))
+
+        # Apply boundary conditions
+        # TODO: this is what's said in the assignment, but shouldn't this be phi(x = 0) = 0 => potentials are relative, take phi(x = 0) as reference?
+        #   Also check with interpolation formula that Robbe implemented => which is correct?
+        phi[0] = phi[1]  # Reflecting boundary at x=0
+        phi[-1] = phi[0]  # Periodic boundary at x=x_max
+
+    # #uncomment tocheck for convergence
+    #     if max_error < tol:
+    #         print(f"SOR converged in {iter_num + 1} iterations.")
+    #         break
+    # else:
+    #     print("increase number of iterations to converge")
+
+    return phi
+
+
+# Function that determines the optimal timestep based on the CFL condition and the plasma frequency condition
 def calculate_max_timestep(dx, v_te, qm_e):
     # CFL condition (particle shouldn't cross more than one cell per timestep)
     dt_cfl = dx / (5.0 * v_te)  # Factor 5 for safety
@@ -57,6 +91,7 @@ def calculate_max_timestep(dx, v_te, qm_e):
 
 # Function to properly initialize velocities for the leapfrog scheme at t-dt/2.
 def initialize_velocities_half_step(x_e, v_e, x_i, v_i, qm_e, qm_i, dt, dx, num_cells):
+    # TODO: use new rho, phi and E calculations (i.e. place these in functions and call them here)
     # Calculate initial electric field
     rho = np.zeros(num_cells)
 
@@ -114,10 +149,10 @@ def initialize_particles():
     return x_e, v_e, x_i, v_i
 
 
-def apply_damping(x , v , x_boundary , width ) :
-    damping_region = ( x >= x_boundary ) & ( x <= x_boundary + width )
-    damping_factor = np . linspace (1 , 0 , np .sum ( damping_region ) )
-    v [ damping_region ] *= damping_factor
+def apply_damping(x, v, x_boundary, width):
+    damping_region = (x >= x_boundary) & (x <= x_boundary + width)
+    damping_factor = np.linspace(1, 0, np.sum(damping_region))
+    v[damping_region] *= damping_factor
     return v
 
 
@@ -145,38 +180,42 @@ def run_simulation(bound_cond=0):
         # check the type of boundary condition to be used
         if bound_cond == 0:
             # remove electrons beyond x = 0
-            mask_e = (x_e > 0) #indexes of particles inside system
+            mask_e = x_e > 0  # indexes of particles inside system
             v_e = v_e[mask_e]
             x_e = x_e[mask_e]
 
             # remove ions beyond x = 0
-            mask_i = (x_i > 0)
+            mask_i = x_i > 0
             v_i = v_i[mask_i]
             x_i = x_i[mask_i]
 
-            #check how many electrons were removed 
+            # check how many electrons were removed
             num_e = len(x_e)
             removed_e = num_particles // 2 - num_e
             if removed_e != 0:
                 # if electrons were removed create new electrons by sampling from existing list
                 rand_ints_e = random.choices(range(num_e), k=removed_e)
-                new_x_e = np.array([x_e[i] + np.random.uniform(-5, 5)*dx for i in rand_ints_e])
+                new_x_e = np.array(
+                    [x_e[i] + np.random.uniform(-5, 5) * dx for i in rand_ints_e]
+                )
                 new_v_e = np.array([v_e[i] for i in rand_ints_e])
 
-                #add these electrons to the old ones
+                # add these electrons to the old ones
                 x_e = np.concatenate((x_e, new_x_e))
                 v_e = np.concatenate((v_e, new_v_e))
 
-            #check how many ions were removed 
+            # check how many ions were removed
             num_i = len(x_i)
             removed_i = num_particles // 2 - num_i
             if removed_i != 0:
                 # if ions were removed create new ions by sampling from existing list
                 rand_ints_i = random.choices(range(num_i), k=removed_i)
-                new_x_i = np.array([x_i[i] + np.random.uniform(-5, 5)*dx for i in rand_ints_i])
+                new_x_i = np.array(
+                    [x_i[i] + np.random.uniform(-5, 5) * dx for i in rand_ints_i]
+                )
                 new_v_i = np.array([v_i[i] for i in rand_ints_i])
 
-                #add these ions to the old ones
+                # add these ions to the old ones
                 x_i = np.concatenate((x_i, new_x_i))
                 v_i = np.concatenate((v_i, new_v_i))
 
@@ -185,14 +224,16 @@ def run_simulation(bound_cond=0):
             x_i = x_i % x_max
 
         if bound_cond == 1:
-            v_e = apply_damping ( x_e , v_e , x_boundary=0 , width = damping_width )
+            v_e = apply_damping(x_e, v_e, x_boundary=0, width=damping_width)
+            # TODO: damping allows negative x values? if so, modulo operation (%) adds x_max to this => undesired
 
             # Apply periodic boundary conditions at x_max (right boundary)
             x_e = x_e % x_max
             x_i = x_i % x_max
 
         if bound_cond == 2:
-            mask_e = (x_e < 0) #indexes of electrons outside system
+            # TODO: purposefully ignored x_i < 0? in any case (x_e % x_max) does this operation for you anyway
+            mask_e = x_e < 0  # indexes of electrons outside system
             x_e[mask_e] = x_e[mask_e] + x_max
 
             # Apply periodic boundary conditions at x_max (right boundary)
@@ -212,12 +253,12 @@ def run_simulation(bound_cond=0):
         np.add.at(rho, (idx_i + 1) % num_cells, qm_i * s_i)
 
         # Solve Poisson's equation
-        phi = np.zeros(num_cells)
         rho_mean = np.mean(rho)
         rho_tilde = rho - rho_mean
 
-        phi[1:] = np.cumsum(rho_tilde[:-1]) * dx**2
-        phi[0] = 3 * phi[1] - 3 * phi[2] + phi[3] 
+        # Solve for the electric potential using SOR
+        phi = solve_poisson_sor(rho_tilde, dx)
+        # phi[0] = 3 * phi[1] - 3 * phi[2] + phi[3]
 
         # Electric field calculation
         E[:-1] = -(phi[1:] - phi[:-1]) / dx
@@ -266,7 +307,7 @@ def run_simulation(bound_cond=0):
 
 
 # Run the simulation
-#bound_cond: 0 = 'Open', 1 = 'Absorbing', 2 = 'Periodic'
+# bound_cond: 0 = 'Open', 1 = 'Absorbing', 2 = 'Periodic'
 x_e, v_e, x_i, v_i, E_history = run_simulation(bound_cond=2)
 
 

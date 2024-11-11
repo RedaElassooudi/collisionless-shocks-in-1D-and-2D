@@ -9,18 +9,22 @@ Created on Fri Oct 25 11:46:16 2024
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import random
+
 
 # Simulation parameters
 num_particles = 20000  # Total number of particles (ions + electrons)
 num_cells = 200  # Number of spatial grid cells
-dx = 1.0  # Spatial step size
-dt = 0.1  # Time step
 num_steps = 1000  # Number of time steps
 qm_e = -1.0  # Charge-to-mass ratio for electrons
 qm_i = 1.0  # Charge-to-mass ratio for ions
 v_te = 1.0  # Thermal velocity for electrons
 v_ti = 0.1  # Thermal velocity for ions
+dx = 1.0  # Spatial step size
 x_max = num_cells * dx  # Maximum position value
+damping_width = x_max // 10  # Size of region where dampening will occur
+random.seed(42)  # set the random seed
+np.random.seed(42)  # Replace 42 with any integer
 
 # Shock generation parameters
 bulk_velocity_e = 2.0  # Bulk velocity for electrons (towards left)
@@ -41,7 +45,7 @@ total_energy_history = []
 
 def solve_poisson_sor(
     rho_tilde, dx, max_iter=1000, tol=1e-6, omega=1.5
-):  # max_iter is numer of iterations, tol is error tollerance, omega is relaxation factor
+):  # max_iter is number of iterations, tol is error tollerance, omega is relaxation factor
     """
     Update for the SOR process for the electric field
     """
@@ -58,6 +62,8 @@ def solve_poisson_sor(
             max_error = max(max_error, abs(phi[i] - old_phi))
 
         # Apply boundary conditions
+        # TODO: this is what's said in the assignment, but shouldn't this be phi(x = 0) = 0 => potentials are relative, take phi(x = 0) as reference?
+        #   Also check with interpolation formula that Robbe implemented => which is correct?
         phi[0] = phi[1]  # Reflecting boundary at x=0
         phi[-1] = phi[0]  # Periodic boundary at x=x_max
 
@@ -69,6 +75,58 @@ def solve_poisson_sor(
     #     print("increase number of iterations to converge")
 
     return phi
+
+
+# Function that determines the optimal timestep based on the CFL condition and the plasma frequency condition
+def calculate_max_timestep(dx, v_te, qm_e):
+    # CFL condition (particle shouldn't cross more than one cell per timestep)
+    dt_cfl = dx / (5.0 * v_te)  # Factor 5 for safety
+
+    # Plasma frequency condition
+    wp = np.sqrt(abs(qm_e))  # Plasma frequency (normalized units)
+    dt_wp = 0.2 / wp  # Factor 0.2 for stability
+
+    # Return the more restrictive timestep
+    return min(dt_cfl, dt_wp)
+
+
+# Function to properly initialize velocities for the leapfrog scheme at t-dt/2.
+def initialize_velocities_half_step(x_e, v_e, x_i, v_i, qm_e, qm_i, dt, dx, num_cells):
+    # TODO: use new rho, phi and E calculations (i.e. place these in functions and call them here)
+    # Calculate initial electric field
+    rho = np.zeros(num_cells)
+
+    # Charge assignment
+    idx_e = (x_e / dx).astype(int) % num_cells
+    idx_i = (x_i / dx).astype(int) % num_cells
+    np.add.at(rho, idx_e, qm_e)
+    np.add.at(rho, idx_i, qm_i)
+
+    # Solve for initial electric field
+    phi = np.zeros(num_cells)
+    rho_mean = np.mean(rho)
+    rho_tilde = rho - rho_mean
+
+    phi[1:] = np.cumsum(rho_tilde[:-1]) * dx**2
+
+    # Electric field calculation
+    E = np.zeros(num_cells)
+    E[:-1] = -(phi[1:] - phi[:-1]) / dx
+    E[-1] = -(phi[0] - phi[-1]) / dx
+
+    # Get field at particle positions
+    E_e = E[idx_e]
+    E_i = E[idx_i]
+
+    # Push velocities back half timestep
+    v_e_half = v_e - 0.5 * qm_e * E_e * dt
+    v_i_half = v_i - 0.5 * qm_i * E_i * dt
+
+    return v_e_half, v_i_half
+
+
+dt = calculate_max_timestep(dx, v_te, qm_e)  # Time step
+print(f"Using timestep: {dt}")
 
 
 # Initialize particle positions and velocities with a bulk flow
@@ -92,70 +150,136 @@ def initialize_particles():
     return x_e, v_e, x_i, v_i
 
 
+def apply_damping(x, v, x_boundary, width):
+    damping_region = (x >= x_boundary) & (x <= x_boundary + width)
+    damping_factor = np.linspace(1, 0, np.sum(damping_region))
+    v[damping_region] *= damping_factor
+    return v
+
+
 # Main simulation function
-def run_simulation():
+def run_simulation(bound_cond=0):
     # Initialize particles
     x_e, v_e, x_i, v_i = initialize_particles()
 
+    # Initialize velocities at half timestep (v^(-1/2))
+    v_e, v_i = initialize_velocities_half_step(
+        x_e, v_e, x_i, v_i, qm_e, qm_i, dt, dx, num_cells
+    )
+
     # Spatial grid
-    x_grid = np.linspace(0, x_max, num_cells + 1)[:-1]  # Grid cell centers
+    x_grid = np.linspace(0, x_max, num_cells + 1)[:-1]
     rho = np.zeros(num_cells)
     E = np.zeros(num_cells)
 
     for step in range(num_steps):
-        # Charge assignment (NGP scheme)
-        rho.fill(0)
-        # Electrons
-        idx_e = (x_e / dx).astype(int) % num_cells
-        np.add.at(rho, idx_e, qm_e)
-        # Ions
-        idx_i = (x_i / dx).astype(int) % num_cells
-        np.add.at(rho, idx_i, qm_i)
+        # Position update (x^(n+1) = x^n + v^(n+1/2) * dt)
+        x_e += v_e * dt
+        x_i += v_i * dt
 
-        # Neutralize the plasma
+        # Apply boundary conditions
+        # check the type of boundary condition to be used
+        if bound_cond == 0:
+            # remove electrons beyond x = 0
+            mask_e = x_e > 0  # indexes of particles inside system
+            v_e = v_e[mask_e]
+            x_e = x_e[mask_e]
+
+            # remove ions beyond x = 0
+            mask_i = x_i > 0
+            v_i = v_i[mask_i]
+            x_i = x_i[mask_i]
+
+            # check how many electrons were removed
+            num_e = len(x_e)
+            removed_e = num_particles // 2 - num_e
+            if removed_e != 0:
+                # if electrons were removed create new electrons by sampling from existing list
+                rand_ints_e = random.choices(range(num_e), k=removed_e)
+                new_x_e = np.array(
+                    [x_e[i] + np.random.uniform(-5, 5) * dx for i in rand_ints_e]
+                )
+                new_v_e = np.array([v_e[i] for i in rand_ints_e])
+
+                # add these electrons to the old ones
+                x_e = np.concatenate((x_e, new_x_e))
+                v_e = np.concatenate((v_e, new_v_e))
+
+            # check how many ions were removed
+            num_i = len(x_i)
+            removed_i = num_particles // 2 - num_i
+            if removed_i != 0:
+                # if ions were removed create new ions by sampling from existing list
+                rand_ints_i = random.choices(range(num_i), k=removed_i)
+                new_x_i = np.array(
+                    [x_i[i] + np.random.uniform(-5, 5) * dx for i in rand_ints_i]
+                )
+                new_v_i = np.array([v_i[i] for i in rand_ints_i])
+
+                # add these ions to the old ones
+                x_i = np.concatenate((x_i, new_x_i))
+                v_i = np.concatenate((v_i, new_v_i))
+
+            # Apply periodic boundary conditions at x_max (right boundary)
+            x_e = x_e % x_max
+            x_i = x_i % x_max
+
+        if bound_cond == 1:
+            v_e = apply_damping(x_e, v_e, x_boundary=0, width=damping_width)
+            # TODO: damping allows negative x values? if so, modulo operation (%) adds x_max to this => undesired
+
+            # Apply periodic boundary conditions at x_max (right boundary)
+            x_e = x_e % x_max
+            x_i = x_i % x_max
+
+        if bound_cond == 2:
+            # TODO: purposefully ignored x_i < 0? in any case (x_e % x_max) does this operation for you anyway
+            mask_e = x_e < 0  # indexes of electrons outside system
+            x_e[mask_e] = x_e[mask_e] + x_max
+
+            # Apply periodic boundary conditions at x_max (right boundary)
+            x_e = x_e % x_max
+            x_i = x_i % x_max
+
+        # Charge assignment (Cloud in Cell scheme)
+        # NOTE: I think it's best to always do this AFTER applying B.C. (negative x's might give troubles)
+        rho.fill(0)
+        idx_e = (x_e / dx).astype(int)
+        s_e = (x_e / dx) - idx_e
+        idx_i = (x_i / dx).astype(int)
+        s_i = (x_i / dx) - idx_i
+        np.add.at(rho, idx_e, qm_e * (1 - s_e))
+        np.add.at(rho, (idx_e + 1) % num_cells, qm_e * s_e)
+        np.add.at(rho, idx_i, qm_i * (1 - s_i))
+        np.add.at(rho, (idx_i + 1) % num_cells, qm_i * s_i)
+
+        # Solve Poisson's equation
         rho_mean = np.mean(rho)
         rho_tilde = rho - rho_mean
 
         # Solve for the electric potential using SOR
         phi = solve_poisson_sor(rho_tilde, dx)
+        # phi[0] = 3 * phi[1] - 3 * phi[2] + phi[3]
 
         # Electric field calculation
         E[:-1] = -(phi[1:] - phi[:-1]) / dx
-        E[-1] = -(phi[0] - phi[-1]) / dx  # Reflecting boundary condition
+        E[-1] = -(phi[0] - phi[-1]) / dx
 
-        # Gather electric field at particle positions
-        E_e = E[idx_e]
-        E_i = E[idx_i]
+        # Gather electric field at particle positions using Cloud-in-Cell weighting
+        E_e = E[idx_e] * (1 - s_e) + E[(idx_e + 1) % num_cells] * s_e
+        E_i = E[idx_i] * (1 - s_i) + E[(idx_i + 1) % num_cells] * s_i
 
-        # Update velocities
+        # Velocity update (v^(n+3/2) = v^(n+1/2) + q/m * E^(n+1) * dt)
         v_e += qm_e * E_e * dt
         v_i += qm_i * E_i * dt
 
-        # Update positions
-        x_e += v_e * dt
-        x_i += v_i * dt
-
-        # Apply reflecting boundary conditions at x=0 (left boundary)
-        # Reflect particles that move beyond x=0
-        mask_e_left = x_e < 0
-        v_e[mask_e_left] = -v_e[mask_e_left]
-        x_e[mask_e_left] = -x_e[mask_e_left]
-
-        mask_i_left = x_i < 0
-        v_i[mask_i_left] = -v_i[mask_i_left]
-        x_i[mask_i_left] = -x_i[mask_i_left]
-
-        # Apply periodic boundary conditions at x_max (right boundary)
-        x_e = x_e % x_max
-        x_i = x_i % x_max
-
-        # Compute densities for diagnostics
+        # Compute diagnostics
         density_e = np.zeros(num_cells)
         density_i = np.zeros(num_cells)
         np.add.at(density_e, idx_e, 1)
         np.add.at(density_i, idx_i, 1)
 
-        # Compute energies
+        # Compute energies (use v^(n+1/2) for kinetic energy)
         kinetic_energy_e = 0.5 * np.sum(v_e**2)
         kinetic_energy_i = 0.5 * np.sum(v_i**2)
         total_kinetic_energy = kinetic_energy_e + kinetic_energy_i
@@ -178,12 +302,14 @@ def run_simulation():
         # Optional: Print progress
         if step % 100 == 0:
             print(f"Step {step}/{num_steps}")
+            print(f"Total Energy: {total_energy:.6f}")
 
     return x_e, v_e, x_i, v_i, E_history
 
 
 # Run the simulation
-x_e, v_e, x_i, v_i, E_history = run_simulation()
+# bound_cond: 0 = 'Open', 1 = 'Absorbing', 2 = 'Periodic'
+x_e, v_e, x_i, v_i, E_history = run_simulation(bound_cond=2)
 
 
 # Plotting functions

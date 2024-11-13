@@ -77,9 +77,9 @@ def solve_poisson_sor(
 
 
 # Function that determines the optimal timestep based on the CFL condition and the plasma frequency condition
-def calculate_max_timestep(dx, v_te, qm_e):
+def calculate_max_timestep(dx, v, qm_e):
     # CFL condition (particle shouldn't cross more than one cell per timestep)
-    dt_cfl = dx / (5.0 * v_te)  # Factor 5 for safety
+    dt_cfl = dx / (5.0 * v)  # Factor 5 for safety
 
     # Plasma frequency condition
     wp = np.sqrt(abs(qm_e))  # Plasma frequency (normalized units)
@@ -124,10 +124,6 @@ def initialize_velocities_half_step(x_e, v_e, x_i, v_i, qm_e, qm_i, dt, dx, num_
     return v_e_half, v_i_half
 
 
-dt = calculate_max_timestep(dx, v_te, qm_e)  # Time step
-print(f"Using timestep: {dt}")
-
-
 # Initialize particle positions and velocities with a bulk flow
 def initialize_particles():
     # Electrons (uniformly distributed with bulk velocity towards left)
@@ -149,10 +145,17 @@ def initialize_particles():
     return x_e, v_e, x_i, v_i
 
 
-def apply_damping(x, v, x_boundary, width):
-    damping_region = (x >= x_boundary) & (x <= x_boundary + width)
-    damping_factor = np.linspace(1, 0, np.sum(damping_region))
-    v[damping_region] *= damping_factor
+def apply_damping(x , v , x_boundary, width) :
+    factor = 0.1
+    #differenciate between the layers at x = 0 and x = x_max
+    if width > 0:
+        damping_region = (x <= x_boundary + width)
+        damp_factor = factor * min(v) / (x_boundary-width)**2
+        v[damping_region] += abs(damp_factor*(x[damping_region]-width)**2)
+    else:
+        damping_region = (x >= x_boundary + width)
+        damp_factor = factor * max(v) / (x_boundary-width)**2
+        v[damping_region] -= abs(damp_factor*(x[damping_region]-width)**2)
     return v
 
 
@@ -160,6 +163,9 @@ def apply_damping(x, v, x_boundary, width):
 def run_simulation(bound_cond=0):
     # Initialize particles
     x_e, v_e, x_i, v_i = initialize_particles()
+
+    #determine the initial timestep
+    dt = calculate_max_timestep(dx, max(v_e + v_i), qm_e)
 
     # Initialize velocities at half timestep (v^(-1/2))
     v_e, v_i = initialize_velocities_half_step(
@@ -172,71 +178,69 @@ def run_simulation(bound_cond=0):
     E = np.zeros(num_cells)
 
     for step in range(num_steps):
+        #determine the timestep
+        dt = calculate_max_timestep(dx, max(v_e + v_i), qm_e)
+
         # Position update (x^(n+1) = x^n + v^(n+1/2) * dt)
-        x_e += v_e * dt
-        x_i += v_i * dt
+        #depending on the boundary condition used this needs to be calculated before or after the boudnary conditions have been checked
+        if bound_cond == 0 or bound_cond == 2:
+            x_e += v_e * dt
+            x_i += v_i * dt
 
         # Apply boundary conditions
         # check the type of boundary condition to be used
         if bound_cond == 0:
-            # remove electrons beyond x = 0
-            mask_e = x_e > 0  # indexes of particles inside system
+            # remove electrons for x < 0 and x > x_max
+            mask_e = (x_e > 0) & (x_e <= x_max)
             v_e = v_e[mask_e]
             x_e = x_e[mask_e]
 
-            # remove ions beyond x = 0
-            mask_i = x_i > 0
+            # remove ions beyond for x < 0 and x > x_max
+            mask_i = (x_i > 0) & (x_i <= x_max)
             v_i = v_i[mask_i]
             x_i = x_i[mask_i]
 
-            # check how many electrons were removed
+            #check how many electrons were removed 
             num_e = len(x_e)
             removed_e = num_particles // 2 - num_e
             if removed_e != 0:
                 # if electrons were removed create new electrons by sampling from existing list
                 rand_ints_e = random.choices(range(num_e), k=removed_e)
-                new_x_e = np.array(
-                    [x_e[i] + np.random.uniform(-5, 5) * dx for i in rand_ints_e]
-                )
+                new_x_e = np.array([min(max(x_e[i] + np.random.uniform(-dx, dx) * dx, 0), x_max-0.001) for i in rand_ints_e])
                 new_v_e = np.array([v_e[i] for i in rand_ints_e])
 
-                # add these electrons to the old ones
+                #add these electrons to the old ones
                 x_e = np.concatenate((x_e, new_x_e))
                 v_e = np.concatenate((v_e, new_v_e))
 
-            # check how many ions were removed
+            #check how many ions were removed 
             num_i = len(x_i)
             removed_i = num_particles // 2 - num_i
             if removed_i != 0:
                 # if ions were removed create new ions by sampling from existing list
                 rand_ints_i = random.choices(range(num_i), k=removed_i)
-                new_x_i = np.array(
-                    [x_i[i] + np.random.uniform(-5, 5) * dx for i in rand_ints_i]
-                )
+                new_x_i = np.array([min(max(x_i[i] + np.random.uniform(-dx, dx)*dx, 0), x_max-0.001) for i in rand_ints_i])
                 new_v_i = np.array([v_i[i] for i in rand_ints_i])
 
-                # add these ions to the old ones
+                #add these ions to the old ones
                 x_i = np.concatenate((x_i, new_x_i))
                 v_i = np.concatenate((v_i, new_v_i))
 
-            # Apply periodic boundary conditions at x_max (right boundary)
-            x_e = x_e % x_max
-            x_i = x_i % x_max
-
         if bound_cond == 1:
-            v_e = apply_damping(x_e, v_e, x_boundary=0, width=damping_width)
-            # TODO: damping allows negative x values? if so, modulo operation (%) adds x_max to this => undesired
+            # Apply absorbing boundary conditions at x_max (right boundary)
+            v_e = apply_damping ( x_e , v_e , x_max , -damping_width)
+            v_i = apply_damping ( x_i , v_i , x_max, -damping_width)
 
-            # Apply periodic boundary conditions at x_max (right boundary)
-            x_e = x_e % x_max
-            x_i = x_i % x_max
+            #apply absorbing boundary condition at x = 0 (left boundary)
+            v_e = apply_damping ( x_e , v_e , 0 , damping_width)
+            v_i = apply_damping ( x_i , v_i , 0 , damping_width)
+
+            #as we change the velocity profile w.r.t x, computing the new positions must occur after dampening has been calculated
+            x_e += v_e * dt
+            x_i += v_i * dt
 
         if bound_cond == 2:
-            # TODO: purposefully ignored x_i < 0? in any case (x_e % x_max) does this operation for you anyway
-            mask_e = x_e < 0  # indexes of electrons outside system
-            x_e[mask_e] = x_e[mask_e] + x_max
-
-            # Apply periodic boundary conditions at x_max (right boundary)
+            # Apply periodic boundary conditions
             x_e = x_e % x_max
             x_i = x_i % x_max
 
@@ -308,7 +312,7 @@ def run_simulation(bound_cond=0):
 
 # Run the simulation
 # bound_cond: 0 = 'Open', 1 = 'Absorbing', 2 = 'Periodic'
-x_e, v_e, x_i, v_i, E_history = run_simulation(bound_cond=2)
+x_e, v_e, x_i, v_i, E_history = run_simulation(bound_cond=1)
 
 
 # Plotting functions

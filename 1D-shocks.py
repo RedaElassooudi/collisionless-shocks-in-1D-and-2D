@@ -245,12 +245,46 @@ def plot_energy_evolution():
     plt.grid(True)
     plt.show()
 
+def plot_velocity_histograms(time_steps):
+    for t in time_steps:
+        plt.figure(figsize=(10, 6))
+        plt.hist(v_e_history[t], bins=50, alpha=0.5, label='Electron Velocity', color='blue')
+        plt.hist(v_i_history[t], bins=50, alpha=0.5, label='Ion Velocity', color='red')
+        plt.title(f"Velocity Histogram at Time Step {t * 10}")
+        plt.xlabel("Velocity")
+        plt.ylabel("Count")
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+
+from matplotlib.animation import FuncAnimation
+
+def animate_phase_space():
+    fig, ax = plt.subplots(figsize=(10, 6))
+    scatter = ax.scatter([], [], s=1, alpha=0.5)
+    ax.set_xlim(0, x_max)
+    ax.set_ylim(min(v_e.min(), v_i.min()), max(v_e.max(), v_i.max()))
+    ax.set_title("Phase Space Evolution")
+    ax.set_xlabel("Position (x)")
+    ax.set_ylabel("Velocity (v)")
+    ax.grid(True)
+
+    def update(frame):
+        scatter.set_offsets(np.c_[x_e_history[frame], v_e_history[frame]])
+        ax.set_title(f"Electron Phase Space at Time Step {frame * 10}")
+        return scatter,
+
+    ani = FuncAnimation(fig, update, frames=len(x_e_history), interval=100)
+    ani.save('phase_space_animation.gif', writer='ffmpeg', fps=30)
+
 
 # Define time steps to plot (start, middle, end)
 time_steps = [0, len(E_history) // 2, -1]  # Start, middle, end
 
 # Plot results
-plot_electric_field(time_steps)
-plot_density_profiles(time_steps)
-plot_phase_space(time_steps)
-plot_energy_evolution()
+#plot_electric_field(time_steps)
+#plot_density_profiles(time_steps)
+#plot_phase_space(time_steps)
+#plot_energy_evolution()
+#plot_velocity_histograms(time_steps)
+animate_phase_space()

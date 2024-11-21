@@ -1,10 +1,10 @@
 import matplotlib.pyplot as plt
 
 
-def electric_field_1D(time_steps, E):
+def electric_field_1D(time_steps, x, E):
     for t in time_steps:
         plt.figure(figsize=(10, 6))
-        plt.plot(E[t], label=f"Time Step {t * 10}")
+        plt.plot(x[t], E[t], label=f"Time Step {t * 10}")
         plt.title(f"Electric Field at Time Step {t * 10}")
         plt.xlabel("Grid Cell")
         plt.ylabel("Electric Field (E)")
@@ -13,11 +13,11 @@ def electric_field_1D(time_steps, E):
         plt.show()
 
 
-def density_profiles_1D(time_steps, ne, ni):
+def density_profiles_1D(time_steps, x, ne, ni):
     for t in time_steps:
         plt.figure(figsize=(10, 6))
-        plt.plot(ne[t], label="Electron Density")
-        plt.plot(ni[t], label="Ion Density")
+        plt.plot(x[t], ne[t], label="Electron Density")
+        plt.plot(x[t], ni[t], label="Ion Density")
         plt.title(f"Density Profiles at Time Step {t * 10}")
         plt.xlabel("Grid Cell")
         plt.ylabel("Density")

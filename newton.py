@@ -33,5 +33,5 @@ def apply_lorenz_force_1D(grid: Grid1D, particles: Particles, dt):
     particles.v += particles.qm * E * dt
 
 
-def boris_pusher(grid: Grid1D3V, electrons: Particles, ions: Particles, params: Parameters):
+def boris_pusher(grid: Grid1D3V, electrons: Particles, ions: Particles, params: Parameters, dt: float):
     raise NotImplementedError()

@@ -5,12 +5,13 @@
 #   - https://en.wikipedia.org/wiki/Successive_over-relaxation
 import numpy as np
 
+from physical_constants import *
 from grids import Grid1D, Grid1D3V
 from parameters import BoundaryCondition, Parameters
 from particles import Particles
 
 
-def poisson_solver(grid: Grid1D, electrons: Particles, ions: Particles, params: Parameters, first=False):
+def poisson_solver_1D(grid: Grid1D, electrons: Particles, ions: Particles, params: Parameters, first=False):
     grid.set_densities(electrons, ions)
     # If this is the first time we solve the poisson equations,
     # we need a good initial guess for the iterative SOR solver,
@@ -20,19 +21,47 @@ def poisson_solver(grid: Grid1D, electrons: Particles, ions: Particles, params: 
     # if first:
     #     naive_poisson_solver(grid, params.dx)
     # solve_poisson_sor(grid.phi, grid.rho, params.dx, params.bc, params.SOR_max_iter, params.SOR_tol, params.SOR_omega)
-    naive_poisson_solver(grid, params.dx)
+    naive_poisson_solver_1D(grid, params.dx)
 
     # Electric field calculation
     grid.E[:-1] = -(grid.phi[1:] - grid.phi[:-1]) / params.dx
-    # TODO: this assumes periodic boundary conditions, do not uncomment or you will get EXTREMELY large field at the right boundary
-    #   The fix also has its issues
-    # grid.E[-1] = -(grid.phi[0] - grid.phi[-1]) / params.dx
-    grid.E[-1] = grid.E[-2]
+    #take boundary conditions into account
+    if params.bc is BoundaryCondition.Periodic: 
+        grid.E[-1] = -(grid.phi[0] - grid.phi[-1]) / params.dx
+    else: #use second order interpolation to get the last value
+        grid.E[-1] = 2 * grid.E[-3] - grid.E[-2]
 
 
-def naive_poisson_solver(grid: Grid1D, dx: float):
+def naive_poisson_solver_1D(grid: Grid1D, dx: float):
     grid.phi.fill(0)
     grid.phi[1:] = np.cumsum(np.cumsum(grid.rho[:-1])) * dx**2
+
+
+def poisson_solver_1D3V(grid: Grid1D, electrons: Particles, ions: Particles, params: Parameters, first=False):
+    grid.set_densities(electrons, ions)
+    # If this is the first time we solve the poisson equations,
+    # we need a good initial guess for the iterative SOR solver,
+    # else convergence can't be achieved within a reasonable number of iterations.
+    # TODO: commented it out so that we can have a result. The SOR solver is very very slow, it never converges.
+    # 1000 SOR iterations / outer iteration really add up (computation time blows up due to this)
+    # if first:
+    #     naive_poisson_solver(grid, params.dx)
+    # solve_poisson_sor(grid.phi, grid.rho, params.dx, params.bc, params.SOR_max_iter, params.SOR_tol, params.SOR_omega)
+    naive_poisson_solver_1D3V(grid, params.dx)
+
+    # Electric field calculation
+    grid.E[:-1,0] = -(grid.phi[1:] - grid.phi[:-1]) / params.dx
+    #take boundary conditions into account
+    if params.bc is BoundaryCondition.Periodic: 
+        grid.E[-1,0] = -(grid.phi[0,0] - grid.phi[-1,0]) / params.dx
+    else: #use second order interpolation to get the last value
+        grid.E[-1,0] = 2 * grid.E[-3,0] - grid.E[-2,0]
+
+
+def naive_poisson_solver_1D3V(grid: Grid1D, dx: float):
+    grid.phi.fill(0)
+    grid.phi[1:] = np.cumsum(np.cumsum(grid.rho[:-1])) * dx**2
+
 
 
 # TODO: if we keep using this solver, try numba
@@ -108,8 +137,64 @@ def calc_curr_dens(grid: Grid1D3V, electrons: Particles, ions: Particles):
     # Current density via CIC for all three velocity components
     grid.J.fill(0)
     np.add.at(grid.J, electrons.idx, electrons.v[electrons.idx] * electrons.q * (1 - electrons.cic_weights))
-    np.add.at(
-        grid.J, (electrons.idx + 1) % grid.n_cells, electrons.v[electrons.idx] * electrons.q * electrons.cic_weights
-    )
+    np.add.at(grid.J, (electrons.idx + 1) % grid.n_cells, electrons.v[electrons.idx] * electrons.q * electrons.cic_weights)
     np.add.at(grid.J, ions.idx, ions.v[ions.idx] * ions.q * (1 - ions.cic_weights))
     np.add.at(grid.J, (ions.idx + 1) % grid.n_cells, ions.v[ions.idx] * ions.q * ions.cic_weights)
+
+def calc_fields(grid: Grid1D3V, dt, bc):
+    #Ey, Ez, By, Bz are calculated using Runge-Kutta 2 and Upwind second order 
+    #some undesirable properties: RK2 is not symplective unlike staggered leapfrog, we do not check for charge conservation for these fields
+    #desirable properties: charge conservation is implemented for Ex, that is why we calculate it using poisson solver at every timestep
+    #a way we might be able to track the accuracy would be by tracking charge conservation and seeing if it holds well enough for our purposes as is.
+    #if so, no further changes are needed.
+    #implementation differs from what Hari sent as it is only firsty order, in that situation it does not matter that J is known only at half steps.
+
+    #second order interpolation to determine J at full timesteps to second order accuracy
+    J_n = (grid.J + grid.J_prev) / 2
+    B_half = np.empty_like(grid.B)
+    E_half = np.empty_like(grid.E)
+
+    if bc is BoundaryCondition.Periodic:
+        #calculate the fields at half timesteps
+        B_half[:,1] = grid.B[:,1] - (dt / 2) * c*c / (2 * grid.dx) * (3 * grid.E[:,2] - 4 * np.roll(grid.E, -1)[:,2] + np.roll(grid.E, -2)[:,2])
+        B_half[:,2] = grid.B[:,2] - (dt / 2) * c*c / (2 * grid.dx) * (3 * grid.E[:,1] - 4 * np.roll(grid.E, 1)[:,1] + np.roll(grid.E, 2)[:,1])
+        E_half[:,1] = grid.E[:,1] - (dt / 2)  * (J_n[:,1] / eps_0 +  c*c / (2 * grid.dx) * (3 * grid.B[:,2] - 4 * np.roll(grid.B, 1)[:,2] + np.roll(grid.B, 2)[:,2]))
+        E_half[:,2] = grid.E[:,2] - (dt / 2)  * (J_n[:,2] / eps_0 +  c*c / (2 * grid.dx) * (3 * grid.B[:,1] - 4 * np.roll(grid.B, -1)[:,1] + np.roll(grid.B, -2)[:,1]))
+
+        #calculate the fields at the full timestep
+        grid.B[:,1] += - dt * c*c / (2 * grid.dx) * (3 * E_half[:,2] - 4 * np.roll(E_half, -1)[:,2] + np.roll(E_half, -2)[:,2])
+        grid.B[:,2] += - dt * c*c / (2 * grid.dx) * (3 * E_half[:,1] - 4 * np.roll(E_half, 1)[:,1] + np.roll(E_half, 2)[:,1])
+        grid.E[:,1] += - dt  * (grid.J[:,1] / eps_0 +  c*c / (2 * grid.dx) * (3 * B_half[:,2] - 4 * np.roll(B_half, 1)[:,2] + np.roll(B_half, 2)[:,2]))
+        grid.E[:,2] += - dt  * (grid.J[:,2] / eps_0 +  c*c / (2 * grid.dx) * (3 * B_half[:,1] - 4 * np.roll(B_half, -1)[:,1] + np.roll(B_half, -2)[:,1]))
+    else:
+        #calculate the fields at half timesteps
+        B_half[:-2,1] = grid.B[:-2,1] - (dt / 2) * c*c / (2 * grid.dx) * (3 * grid.E[:-2,2] - 4 * grid.E[1:-1,2] + grid.E[2:,2])
+        B_half[2:,2] = grid.B[2:,2] - (dt / 2) * c*c / (2 * grid.dx) * (3 * grid.E[2:,1] - 4 * grid.E[1:-1,1] + grid.E[:-2,1])
+        E_half[2:,1] = grid.E[2:,1] - (dt / 2)  * (J_n[2:,1] / eps_0 +  c*c / (2 * grid.dx) * (3 * grid.B[2:,2] - 4 * grid.B[1:-1,2] + grid.B[:-2,2]))
+        E_half[:-2,2] = grid.E[:-2,2] - (dt / 2)  * (J_n[:-2,2] / eps_0 +  c*c / (2 * grid.dx) * (3 * grid.B[:-2,1] - 4 * grid.B[1:-1,1] + grid.B[2:,1]))
+
+        #calculate the boundary values using interpolation
+        B_half[-2,1] = 3 * B_half[-3,1] - 3 * B_half[-4,1] + B_half[-5,1]
+        B_half[-1,1] = 3 * B_half[-2,1] - 3 * B_half[-3,1] + B_half[-4,1]
+        B_half[1,2] = 3 * B_half[2,2] - 3 * B_half[3,2] + B_half[4,2]
+        B_half[0,2] = 3 * B_half[1,2] - 3 * B_half[2,2] + B_half[3,2]
+        E_half[1,1] = 3 * E_half[2,1] - 3 * E_half[3,1] + E_half[4,1]
+        E_half[0,1] = 3 * E_half[1,1] - 3 * E_half[2,1] + E_half[3,1]
+        E_half[-2,2] = 3 * E_half[-3,2] - 3 * E_half[-4,2] + E_half[-5,2]
+        E_half[-1,2] = 3 * E_half[-2,2] - 3 * E_half[-3,2] + E_half[-4,2]
+
+        #calculate the fields at the full timestep
+        grid.B[:-2,1] += - dt * c*c / (2 * grid.dx) * (3 * E_half[:-2,2] - 4 * E_half[1:-1,2] + E_half[2:,2])
+        grid.B[2:,2] += - dt * c*c / (2 * grid.dx) * (3 * E_half[2:,1] - 4 * E_half[1:-1,1] + E_half[:-2,1])
+        grid.E[2:,1] += - dt  * (grid.J[2:,1] / eps_0 +  c*c / (2 * grid.dx) * (3 * B_half[2:,2] - 4 * B_half[1:-1,2] + B_half[:-2,2]))
+        grid.E[:-2,2] += - dt  * (grid.J[:-2,2] / eps_0 +  c*c / (2 * grid.dx) * (3 * B_half[:-2,1] - 4 * B_half[1:-1,1] + B_half[2:,1]))
+
+        #calculate the boundary values using interpolation
+        grid.B[-2,1] = 3 * grid.B[-3,1] - 3 * grid.B[-4,1] + grid.B[-5,1]
+        grid.B[-1,1] = 3 * grid.B[-2,1] - 3 * grid.B[-3,1] + grid.B[-4,1]
+        grid.B[1,2] = 3 * grid.B[2,2] - 3 * grid.B[3,2] + grid.B[4,2]
+        grid.B[0,2] = 3 * grid.B[1,2] - 3 * grid.B[2,2] + grid.B[3,2]
+        grid.E[1,1] = 3 * grid.E[2,1] - 3 * grid.E[3,1] + grid.E[4,1]
+        grid.E[0,1] = 3 * grid.E[1,1] - 3 * grid.E[2,1] + grid.E[3,1]
+        grid.E[-2,2] = 3 * grid.E[-3,2] - 3 * grid.E[-4,2] + grid.E[-5,2]
+        grid.E[-1,2] = 3 * grid.E[-2,2] - 3 * grid.E[-3,2] + grid.E[-4,2]

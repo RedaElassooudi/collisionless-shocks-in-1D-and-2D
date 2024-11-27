@@ -1,6 +1,6 @@
 from initial_distributions import initialize_particles
 from parameters import Parameters, BoundaryCondition
-import solver_1D
+import solver_1D3V
 import visualizations as vis
 
 if __name__ == "__main__":
@@ -17,9 +17,9 @@ if __name__ == "__main__":
     bulk_velocity_e = 2.0  # Bulk velocity for electrons (towards left)
     bulk_velocity_i = 0.2  # Bulk velocity for ions (towards left)
 
-    el, io = initialize_particles(num_particles, x_max, bulk_velocity_e, bulk_velocity_i, 1)
+    el, io = initialize_particles(num_particles, x_max, bulk_velocity_e, bulk_velocity_i, 3)
     params = Parameters(x_max, dx, t_max, BoundaryCondition.Open)
-    res = solver_1D.simulate(el, io, params)
+    res = solver_1D3V.simulate(el, io, params)
 
     # Define time steps to plot (start, middle, end)
     time_steps = [0, len(res.t) // 2, len(res.t) - 1]

@@ -56,7 +56,7 @@ def _open_bc(particles: Particles, x_max: float, dx: float):
         # add these electrons to the old ones
         particles.add_particles(new_x, new_v)
 
-
+#When using Absorbiing boundaries, make sure that the initial conditions are chosen such that there are no particles near the edges
 def absorbing_bc_1D(electrons: Particles, ions: Particles, x_max: float, damping_width: float):
     # Apply absorbing boundary conditions at x_max (right boundary)
     _apply_damping(electrons, x_max, -damping_width)

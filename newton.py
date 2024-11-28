@@ -50,7 +50,8 @@ def boris_pusher_1D3V(grid: Grid1D3V, particles: Particles, dt):
 
     # Full step due to magnetic field
     t = particles.qm * B * dt / 2
-    t_mag2 = np.square(t,t)
+    t_mag2 = np.einsum('ij,ij->i', t, t)
+    t_mag2 = t_mag2[:, np.newaxis]
     s = (2 * t) / (1+ t_mag2)
     particles.v += np.cross(particles.v + np.cross(particles.v, t), s)
 

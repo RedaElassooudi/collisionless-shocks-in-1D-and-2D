@@ -28,6 +28,10 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
 
     max_v = max(np.max(np.linalg.norm(electrons.v, axis=1)), np.max(np.linalg.norm(ions.v, axis=1)))
     dt = calculate_dt_max(params.dx, max_v, electrons.qm, safety_factor=20)
+    # Calculate the fields here so that they are stored at t=0
+    maxwell.poisson_solver_1D3V(grid, electrons, ions, params, params.bc)
+    maxwell.calc_curr_dens(grid, electrons, ions)
+    maxwell.calc_fields(grid, dt, params.bc)
 
     # Save data at time = 0
     results.save_time(0)
@@ -109,10 +113,10 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
             results.save_cells(grid)
 
         if time.time() - t_last > 5:
-            t_last = time.time()
-            # print(f"{step:9}{t:12.4e}{dt:12.4e}{t_last - t_start:21.3e}{TE:14.4e}")
+                t_last = time.time()
+                print(f"{step:9}{t:12.4e}{dt:12.4e}{t_last - t_start:21.3e}{TE:14.4e}")
 
-    print(f"{step:9}{t}{dt}{time.time() - t_start:21.3e}{TE:14.4e}")
+    print(f"{step:9}{t:12.4e}{dt:12.4e}{time.time() - t_start:21.3e}{TE:14.4e}")
     # TODO: maybe, once we run *A LOT* of iterations, periodically save the data to a file
     # instead of keeping everything in memory
     return results

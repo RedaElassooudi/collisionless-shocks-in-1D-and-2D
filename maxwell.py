@@ -157,6 +157,7 @@ def calc_fields(grid: Grid1D3V, dt, bc):
     #second order interpolation to determine J at full timesteps to second order accuracy
     B_half = np.empty_like(grid.B)
     E_half = np.empty_like(grid.E)
+    
 
     if bc is BoundaryCondition.Periodic:
         #calculate the fields at half timesteps

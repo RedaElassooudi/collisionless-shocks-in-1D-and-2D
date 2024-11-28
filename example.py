@@ -33,6 +33,7 @@ if __name__ == "__main__":
 
     # Plot results
     vis.electric_field_1D(time_steps, res.x, res.E)
+    vis.magnetic_field_1D(time_steps, res.x, res.B)
     vis.density_profiles_1D(time_steps, res.x, res.n_e, res.n_i)
     vis.phase_space_1D(time_steps, res.x_e, res.v_e, res.x_i, res.v_i)
     vis.energy_evolution(res.KE, res.PE, res.TE)

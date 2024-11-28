@@ -1,3 +1,6 @@
+import numpy as np
+import random
+
 
 from initial_distributions import initialize_particles
 from parameters import Parameters, BoundaryCondition
@@ -5,6 +8,9 @@ import solver_1D3V
 import visualizations as vis
 
 if __name__ == "__main__":
+
+    np.random.seed(42)
+    random.seed(42)
 
     num_particles = 20000  # Total number of particles (ions + electrons)
     num_cells = 200  # Number of spatial grid cells

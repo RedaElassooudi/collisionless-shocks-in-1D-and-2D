@@ -146,10 +146,6 @@ def calc_curr_dens(grid: Grid1D3V, electrons: Particles, ions: Particles):
     np.add.at(grid.J, (electrons.idx.flatten() + 1) % grid.n_cells, electrons.v * electrons.q * electrons.cic_weights)
     np.add.at(grid.J, ions.idx.flatten(), ions.v * ions.q * (1 - ions.cic_weights))
     np.add.at(grid.J, (ions.idx.flatten() + 1) % grid.n_cells, ions.v * ions.q * ions.cic_weights)
-    """
-    for i in range(electrons.N):
-        grid.J[electrons.idx[i]] += electrons.q * (1-electrons.cic_weights[i]) * electrons.v[i]
-    """
 
 def calc_fields(grid: Grid1D3V, dt, bc):
     #Ey, Ez, By, Bz are calculated using Runge-Kutta 2 and Upwind second order 

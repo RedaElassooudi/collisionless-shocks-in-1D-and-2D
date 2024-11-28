@@ -50,12 +50,12 @@ class Grid1D3V:
         self.dx = dx
         self.x = np.arange(0, x_max, dx)
         self.n_cells = self.x.size
-        self.E = np.empty((self.n_cells, 3))
-        self.J = np.empty((self.n_cells, 3))
-        self.B = np.empty((self.n_cells, 3))
+        self.E = np.zeros((self.n_cells, 3))
+        self.J = np.zeros((self.n_cells, 3))
+        self.B = np.zeros((self.n_cells, 3))
         #external fields:
-        self.E_0 = np.empty((self.n_cells, 3))
-        self.B_0 = np.empty((self.n_cells, 3))
+        self.E_0 = np.zeros((self.n_cells, 3))
+        self.B_0 = np.zeros((self.n_cells, 3))
         # Cell averaged-quantities
         self.n_e = np.empty(self.n_cells)
         self.n_i = np.empty(self.n_cells)

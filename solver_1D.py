@@ -1,5 +1,6 @@
 import time
 import numpy as np
+import random
 
 import boundary_conditions
 from grids import Grid1D
@@ -14,6 +15,7 @@ from time_constraint import calculate_dt_max
 
 def simulate(electrons: Particles, ions: Particles, params: Parameters):
     np.random.seed(params.seed)
+    random.seed(params.seed)
     t_start = time.time()
     if electrons.N != ions.N:
         print("Plasma with non-neutral charge")

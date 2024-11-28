@@ -27,7 +27,10 @@ def poisson_solver_1D(grid: Grid1D, electrons: Particles, ions: Particles, param
     grid.E[:-1] = -(grid.phi[1:] - grid.phi[:-1]) / params.dx
     #take boundary conditions into account
     if params.bc is BoundaryCondition.Periodic: 
-        grid.E[-1] = -(grid.phi[0] - grid.phi[-1]) / params.dx
+        # TODO: this assumes periodic boundary conditions, do not uncomment or you will get EXTREMELY large field at the right boundary
+        #   The fix also has its issues
+        # grid.E[-1] = -(grid.phi[0] - grid.phi[-1]) / params.dx
+        pass
     else: #use second order interpolation to get the last value
         grid.E[-1] = 2 * grid.E[-3] - grid.E[-2]
 
@@ -53,7 +56,10 @@ def poisson_solver_1D3V(grid: Grid1D, electrons: Particles, ions: Particles, par
     grid.E[:-1,0] = -(grid.phi[1:] - grid.phi[:-1]) / params.dx
     #take boundary conditions into account
     if params.bc is BoundaryCondition.Periodic: 
-        grid.E[-1,0] = -(grid.phi[0,0] - grid.phi[-1,0]) / params.dx
+        # TODO: this assumes periodic boundary conditions, do not uncomment or you will get EXTREMELY large field at the right boundary
+        #  The fix also has its issues
+        # grid.E[-1,0] = -(grid.phi[0] - grid.phi[-1]) / params.dx
+        pass
     else: #use second order interpolation to get the last value
         grid.E[-1,0] = 2 * grid.E[-3,0] - grid.E[-2,0]
 
@@ -136,21 +142,23 @@ def thomas_solver(a, b, c, d):
 def calc_curr_dens(grid: Grid1D3V, electrons: Particles, ions: Particles):
     # Current density via CIC for all three velocity components
     grid.J.fill(0)
-    np.add.at(grid.J, electrons.idx, electrons.v[electrons.idx] * electrons.q * (1 - electrons.cic_weights))
-    np.add.at(grid.J, (electrons.idx + 1) % grid.n_cells, electrons.v[electrons.idx] * electrons.q * electrons.cic_weights)
-    np.add.at(grid.J, ions.idx, ions.v[ions.idx] * ions.q * (1 - ions.cic_weights))
-    np.add.at(grid.J, (ions.idx + 1) % grid.n_cells, ions.v[ions.idx] * ions.q * ions.cic_weights)
+    np.add.at(grid.J, electrons.idx.flatten(), electrons.v * electrons.q * (1 - electrons.cic_weights))
+    np.add.at(grid.J, (electrons.idx.flatten() + 1) % grid.n_cells, electrons.v * electrons.q * electrons.cic_weights)
+    np.add.at(grid.J, ions.idx.flatten(), ions.v * ions.q * (1 - ions.cic_weights))
+    np.add.at(grid.J, (ions.idx.flatten() + 1) % grid.n_cells, ions.v * ions.q * ions.cic_weights)
+    """
+    for i in range(electrons.N):
+        grid.J[electrons.idx[i]] += electrons.q * (1-electrons.cic_weights[i]) * electrons.v[i]
+    """
 
 def calc_fields(grid: Grid1D3V, dt, bc):
     #Ey, Ez, By, Bz are calculated using Runge-Kutta 2 and Upwind second order 
-    #some undesirable properties: RK2 is not symplective unlike staggered leapfrog, we do not check for charge conservation for these fields
+    #some undesirable properties: we do not check for charge conservation for these fields
     #desirable properties: charge conservation is implemented for Ex, that is why we calculate it using poisson solver at every timestep
     #a way we might be able to track the accuracy would be by tracking charge conservation and seeing if it holds well enough for our purposes as is.
     #if so, no further changes are needed.
-    #implementation differs from what Hari sent as it is only firsty order, in that situation it does not matter that J is known only at half steps.
 
     #second order interpolation to determine J at full timesteps to second order accuracy
-    J_n = (grid.J + grid.J_prev) / 2
     B_half = np.empty_like(grid.B)
     E_half = np.empty_like(grid.E)
 
@@ -158,8 +166,8 @@ def calc_fields(grid: Grid1D3V, dt, bc):
         #calculate the fields at half timesteps
         B_half[:,1] = grid.B[:,1] - (dt / 2) * c*c / (2 * grid.dx) * (3 * grid.E[:,2] - 4 * np.roll(grid.E, -1)[:,2] + np.roll(grid.E, -2)[:,2])
         B_half[:,2] = grid.B[:,2] - (dt / 2) * c*c / (2 * grid.dx) * (3 * grid.E[:,1] - 4 * np.roll(grid.E, 1)[:,1] + np.roll(grid.E, 2)[:,1])
-        E_half[:,1] = grid.E[:,1] - (dt / 2)  * (J_n[:,1] / eps_0 +  c*c / (2 * grid.dx) * (3 * grid.B[:,2] - 4 * np.roll(grid.B, 1)[:,2] + np.roll(grid.B, 2)[:,2]))
-        E_half[:,2] = grid.E[:,2] - (dt / 2)  * (J_n[:,2] / eps_0 +  c*c / (2 * grid.dx) * (3 * grid.B[:,1] - 4 * np.roll(grid.B, -1)[:,1] + np.roll(grid.B, -2)[:,1]))
+        E_half[:,1] = grid.E[:,1] - (dt / 2)  * (grid.J[:,1] / eps_0 +  c*c / (2 * grid.dx) * (3 * grid.B[:,2] - 4 * np.roll(grid.B, 1)[:,2] + np.roll(grid.B, 2)[:,2]))
+        E_half[:,2] = grid.E[:,2] - (dt / 2)  * (grid.J[:,2] / eps_0 +  c*c / (2 * grid.dx) * (3 * grid.B[:,1] - 4 * np.roll(grid.B, -1)[:,1] + np.roll(grid.B, -2)[:,1]))
 
         #calculate the fields at the full timestep
         grid.B[:,1] += - dt * c*c / (2 * grid.dx) * (3 * E_half[:,2] - 4 * np.roll(E_half, -1)[:,2] + np.roll(E_half, -2)[:,2])
@@ -170,8 +178,8 @@ def calc_fields(grid: Grid1D3V, dt, bc):
         #calculate the fields at half timesteps
         B_half[:-2,1] = grid.B[:-2,1] - (dt / 2) * c*c / (2 * grid.dx) * (3 * grid.E[:-2,2] - 4 * grid.E[1:-1,2] + grid.E[2:,2])
         B_half[2:,2] = grid.B[2:,2] - (dt / 2) * c*c / (2 * grid.dx) * (3 * grid.E[2:,1] - 4 * grid.E[1:-1,1] + grid.E[:-2,1])
-        E_half[2:,1] = grid.E[2:,1] - (dt / 2)  * (J_n[2:,1] / eps_0 +  c*c / (2 * grid.dx) * (3 * grid.B[2:,2] - 4 * grid.B[1:-1,2] + grid.B[:-2,2]))
-        E_half[:-2,2] = grid.E[:-2,2] - (dt / 2)  * (J_n[:-2,2] / eps_0 +  c*c / (2 * grid.dx) * (3 * grid.B[:-2,1] - 4 * grid.B[1:-1,1] + grid.B[2:,1]))
+        E_half[2:,1] = grid.E[2:,1] - (dt / 2)  * (grid.J[2:,1] / eps_0 +  c*c / (2 * grid.dx) * (3 * grid.B[2:,2] - 4 * grid.B[1:-1,2] + grid.B[:-2,2]))
+        E_half[:-2,2] = grid.E[:-2,2] - (dt / 2)  * (grid.J[:-2,2] / eps_0 +  c*c / (2 * grid.dx) * (3 * grid.B[:-2,1] - 4 * grid.B[1:-1,1] + grid.B[2:,1]))
 
         #calculate the boundary values using interpolation
         B_half[-2,1] = 3 * B_half[-3,1] - 3 * B_half[-4,1] + B_half[-5,1]

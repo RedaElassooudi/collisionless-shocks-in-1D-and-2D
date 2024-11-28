@@ -26,7 +26,6 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
 
     max_v = max(np.max(np.linalg.norm(electrons.v, axis=1)), np.max(np.linalg.norm(ions.v, axis=1)))
     dt = calculate_dt_max(params.dx, max_v, electrons.qm, safety_factor=20)
-    newton.initialize_velocities_half_step_1D3V(grid, electrons, ions, params, dt)
 
     # Save data at time = 0
     results.save_time(0)
@@ -47,8 +46,6 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
     t = 0  # Time in the simulation
     step = 0  # Number of iterations
 
-    #determine the current density for the first timestep
-    maxwell.calc_curr_dens(grid, electrons, ions)
     while t < params.t_max:
         step += 1
 
@@ -57,22 +54,16 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
         t += dt
 
         # Solve the Maxwell equation on the grid and set the values for J, E, B
-        # Store J of the previous timestep
-        grid.J_prev = grid.J.copy()
-        # Solve for the current density J
-        maxwell.calc_curr_dens(grid, electrons, ions)
-        """
-        # Calculate velocities v^(n+1/2) using Newton's equation
-        newton.boris_pusher(grid, electrons, ions, params, dt)
-        """
         # Solve the Poisson equation on the grid and set the values for rho, phi and Ex
         maxwell.poisson_solver_1D3V(grid, electrons, ions, params, params.bc)
+        # Solve for the current density J
+        maxwell.calc_curr_dens(grid, electrons, ions)
         # Solve the Ampere and Faraday laws and set values for Ey, Ez, By, Bz
         maxwell.calc_fields(grid, dt, params.bc)
 
-        # Calculate velocities v^(n+1/2) using Newton's equation
-        newton.apply_lorenz_force_1D3V(grid, electrons, dt)
-        newton.apply_lorenz_force_1D3V(grid, ions, dt, params.bc)
+        # Calculate velocities v^(n+1) using the boris pusher
+        newton.boris_pusher_1D3V(grid, electrons, dt)
+        newton.boris_pusher_1D3V(grid, ions, dt)
         # Calculate positions x^(n+1)
         # depending on the boundary condition, the positions have to be updated before or after
         # the boundary conditions have been applied
@@ -89,7 +80,8 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
         elif params.bc is BoundaryCondition.Absorbing:
             # Absorbing bc's affect the *velocities* of the particles, so advance positions only
             # after damping of velocities has been calculated
-            # TODO: 1D -> 1D3V
+            # TODO: 1D -> 1D3V @Simon should already be fine as the only velocity that matters is the velocity in the x direction as the others don't affect the position of thge particle in the system
+            #some velocity only needs to be absorbed artificially if the particle gets to close to the edges which can only occur in the x direction
             boundary_conditions.absorbing_bc_1D(electrons, ions, params.x_max, params.damping_width)
             newton.advance_positions(electrons, dt)
             newton.advance_positions(ions, dt)
@@ -116,9 +108,9 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
 
         if time.time() - t_last > 5:
             t_last = time.time()
-            print(f"{step:9}{t:12.4e}{dt:12.4e}{t_last - t_start:21.3e}{TE:14.4e}")
+            # print(f"{step:9}{t:12.4e}{dt:12.4e}{t_last - t_start:21.3e}{TE:14.4e}")
 
-    print(f"{step:9}{t:12.4e}{dt:12.4e}{time.time() - t_start:21.3e}{TE:14.4e}")
+    print(f"{step:9}{t}{dt}{time.time() - t_start:21.3e}{TE:14.4e}")
     # TODO: maybe, once we run *A LOT* of iterations, periodically save the data to a file
     # instead of keeping everything in memory
     return results

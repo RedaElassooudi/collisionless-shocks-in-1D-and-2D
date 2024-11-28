@@ -1,3 +1,4 @@
+
 from initial_distributions import initialize_particles
 from parameters import Parameters, BoundaryCondition
 import solver_1D3V
@@ -18,7 +19,7 @@ if __name__ == "__main__":
     bulk_velocity_i = 0.2  # Bulk velocity for ions (towards left)
 
     el, io = initialize_particles(num_particles, x_max, bulk_velocity_e, bulk_velocity_i, 3)
-    params = Parameters(x_max, dx, t_max, BoundaryCondition.Open)
+    params = Parameters(x_max, dx, t_max, BoundaryCondition.Periodic)
     res = solver_1D3V.simulate(el, io, params)
 
     # Define time steps to plot (start, middle, end)

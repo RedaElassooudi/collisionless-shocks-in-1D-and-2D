@@ -52,7 +52,6 @@ class Grid1D3V:
         self.n_cells = self.x.size
         self.E = np.empty((self.n_cells, 3))
         self.J = np.empty((self.n_cells, 3))
-        self.J_prev = np.empty((self.n_cells, 3))
         self.B = np.empty((self.n_cells, 3))
         #external fields:
         self.E_0 = np.empty((self.n_cells, 3))

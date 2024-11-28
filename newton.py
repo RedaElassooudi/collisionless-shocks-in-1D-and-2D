@@ -35,20 +35,7 @@ def apply_lorenz_force_1D(grid: Grid1D, particles: Particles, dt):
     particles.v += particles.qm * E * dt
 
 
-def initialize_velocities_half_step_1D3V(grid: Grid1D3V, electrons: Particles, ions: Particles, params: Parameters, dt: float):
-    """
-    Function to properly initialize velocities for the leapfrog scheme at t-dt/2.
-    """
-    # Calculate initial electric field
-    maxwell.poisson_solver_1D3V(grid, electrons, ions, params, first=True)
-
-
-    # Apply Lorenz force backwards in time to find v^(-1/2)
-    apply_lorenz_force_1D3V(grid, electrons, -dt / 2)
-    apply_lorenz_force_1D3V(grid, ions, -dt / 2)
-
-
-def apply_lorenz_force_1D3V(grid: Grid1D3V, particles: Particles, dt):
+def boris_pusher_1D3V(grid: Grid1D3V, particles: Particles, dt):
     # Get field at particle positions
     E = (
         grid.E[particles.idx.flatten()] * (1 - particles.cic_weights)
@@ -58,10 +45,16 @@ def apply_lorenz_force_1D3V(grid: Grid1D3V, particles: Particles, dt):
         grid.B[particles.idx.flatten()] * (1 - particles.cic_weights)
         + grid.B[(particles.idx.flatten() + 1) % grid.n_cells] * particles.cic_weights
     )
-    # Push velocities back half timestep
-    particles.v += particles.qm * E * dt
+    # Half step due to electric field
+    particles.v += particles.qm * E * dt / 2
+
+    # Full step due to magnetic field
+    t = particles.qm * B * dt / 2
+    t_mag2 = np.square(t,t)
+    s = (2 * t) / (1+ t_mag2)
+    particles.v += np.cross(particles.v + np.cross(particles.v, t), s)
+
+    # Half step due to electric field
+    particles.v +=  particles.qm * E * dt / 2
 
 
-
-def boris_pusher(grid: Grid1D3V, electrons: Particles, ions: Particles, params: Parameters, dt: float):
-    raise NotImplementedError()

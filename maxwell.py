@@ -153,12 +153,12 @@ def calc_fields(grid: Grid1D3V, dt, bc):
     #desirable properties: charge conservation is implemented for Ex, that is why we calculate it using poisson solver at every timestep
     #a way we might be able to track the accuracy would be by tracking charge conservation and seeing if it holds well enough for our purposes as is.
     #if so, no further changes are needed.
-
+    """
     #second order interpolation to determine J at full timesteps to second order accuracy
     B_half = np.empty_like(grid.B)
     E_half = np.empty_like(grid.E)
     
-    """
+    
     if bc is BoundaryCondition.Periodic:
         #calculate the fields at half timesteps
         B_half[:,1] = grid.B[:,1] - (dt / 2) / (2 * grid.dx) * (3 * grid.E[:,2] - 4 * np.roll(grid.E, -1)[:,2] + np.roll(grid.E, -2)[:,2])
@@ -204,22 +204,24 @@ def calc_fields(grid: Grid1D3V, dt, bc):
         grid.E[-2,2] = 3 * grid.E[-3,2] - 3 * grid.E[-4,2] + grid.E[-5,2]
         grid.E[-1,2] = 3 * grid.E[-2,2] - 3 * grid.E[-3,2] + grid.E[-4,2]
     """
-    
+    B_temp = grid.B.copy()
+    E_temp = grid.E.copy()
+
     if bc is BoundaryCondition.Periodic:
         #calculate the fields at the full timestep
-        grid.B[:,1] += dt / grid.dx * (np.roll(E_half, -1)[:,2] - E_half[:,2])
-        grid.B[:,2] += dt / grid.dx * (np.roll(E_half, 1)[:,1] - E_half[:,1])
-        grid.E[:,1] += dt  * (-grid.J[:,1] / eps_0 +  c*c / grid.dx * (np.roll(B_half, 1)[:,2] - B_half[:,2]))
-        grid.E[:,2] += dt  * (-grid.J[:,2] / eps_0 +  c*c / grid.dx * (np.roll(B_half, -1)[:,1] - B_half[:,1]))
+        B_temp[:,1] += dt / grid.dx * (np.roll(grid.E, -1)[:,2] - grid.E[:,2])
+        B_temp[:,2] += dt / grid.dx * (np.roll(grid.E, 1)[:,1] - grid.E[:,1])
+        E_temp[:,1] += dt  * (-grid.J[:,1] / eps_0 +  c*c / grid.dx * (np.roll(grid.B, 1)[:,2] - grid.B[:,2]))
+        E_temp[:,2] += dt  * (-grid.J[:,2] / eps_0 +  c*c / grid.dx * (np.roll(grid.B, -1)[:,1] - grid.B[:,1]))
     else:
         #calculate the fields at the full timestep
-        grid.B[:-1,1] += dt / grid.dx * (E_half[1:,2] - E_half[:-1,2])
-        grid.B[1:,2] += dt / grid.dx * (E_half[:-1,1] - E_half[1:,1])
-        grid.E[1:,1] += dt  * (-grid.J[1:,1] / eps_0 +  c*c / grid.dx * (B_half[:-1,2] - B_half[1:,2]))
-        grid.E[:-1,2] += dt  * (-grid.J[:-1,2] / eps_0 +  c*c / grid.dx * (B_half[1:,1] - B_half[:-1,1]))
+        B_temp[:-1,1] += dt / grid.dx * (grid.E[1:,2] - grid.E[:-1,2])
+        B_temp[1:,2] += dt / grid.dx * (grid.E[:-1,1] - grid.E[1:,1])
+        E_temp[1:,1] += dt  * (-grid.J[1:,1] / eps_0 +  c*c / grid.dx * (grid.B[:-1,2] - grid.B[1:,2]))
+        E_temp[:-1,2] += dt  * (-grid.J[:-1,2] / eps_0 +  c*c / grid.dx * (grid.B[1:,1] - grid.B[:-1,1]))
 
         #calculate the boundary values using interpolation
-        grid.B[-1,1] = 3 * grid.B[-2,1] - 3 * grid.B[-3,1] + grid.B[-4,1]
-        grid.B[0,2] = 3 * grid.B[1,2] - 3 * grid.B[2,2] + grid.B[3,2]
-        grid.E[0,1] = 3 * grid.E[1,1] - 3 * grid.E[2,1] + grid.E[3,1]
-        grid.E[-1,2] = 3 * grid.E[-2,2] - 3 * grid.E[-3,2] + grid.E[-4,2]
+        B_temp[-1,1] = 3 * B_temp[-2,1] - 3 * B_temp[-3,1] + B_temp[-4,1]
+        B_temp[0,2] = 3 * B_temp[1,2] - 3 * B_temp[2,2] + B_temp[3,2]
+        E_temp[0,1] = 3 * E_temp[1,1] - 3 * E_temp[2,1] + E_temp[3,1]
+        E_temp[-1,2] = 3 * E_temp[-2,2] - 3 * E_temp[-3,2] + E_temp[-4,2]

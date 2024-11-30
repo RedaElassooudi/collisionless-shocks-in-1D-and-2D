@@ -12,7 +12,7 @@ def periodic_bc(electrons: Particles, ions: Particles, x_max: float):
         electrons (Particles): the electrons
         ions (Particles): the ions
         x_max (float / tuple): the size of the domain. float for 1D, tuple for 2D and 3D
-    """
+    """  
     _periodic_bc(electrons, x_max)
     _periodic_bc(ions, x_max)
 

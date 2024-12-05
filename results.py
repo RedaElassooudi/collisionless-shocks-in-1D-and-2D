@@ -27,13 +27,27 @@ class Results:
         self.v_e = []
         self.x_i = []
         self.v_i = []
-        # Keeps track of the electromagnetic quantities (J and B will remain empty for 1D solver, while phi will only be non-empty for 1D solver)
+        # Keeps track of the electric field E(x)
         self.E = []
-        self.phi = []
-        self.J = []
-        self.B = []
         # Keeps track of how cells shape the domain
         self.x = []
+
+    def save(
+        self,
+        t: float,
+        KE: float,
+        PE: float,
+        TE: float,
+        grid: Union[grids.Grid1D, grids.Grid1D3V, grids.Grid2D],
+        electrons: Particles,
+        ions: Particles,
+    ):
+        self.save_time(t)
+        self.save_energies(KE, PE, TE)
+        self.save_densities(grid)
+        self.save_phase_space(electrons, ions)
+        self.save_fields(grid)
+        self.save_cells(grid)
 
     def save_time(self, t: float):
         self.t.append(t)
@@ -53,14 +67,32 @@ class Results:
         self.x_i.append(ions.x.copy())
         self.v_i.append(ions.v.copy())
 
-    def save_fields_1D(self, grid: grids.Grid1D):
+    def save_fields(self, grid: Union[grids.Grid1D, grids.Grid1D3V, grids.Grid2D]):
         self.E.append(grid.E.copy())
-        self.phi.append(grid.phi.copy())
-
-    def save_fields_ND(self, grid: Union[grids.Grid1D3V, grids.Grid2D]):
-        self.E.append(grid.E.copy())
-        self.J.append(grid.J.copy())
-        self.B.append(grid.B.copy())
 
     def save_cells(self, grid: Union[grids.Grid1D, grids.Grid1D3V, grids.Grid2D]):
         self.x.append(grid.x.copy())
+
+
+class Results1D(Results):
+    def __init__(self):
+        super().__init__()
+        # 1D results store the potential phi(x)
+        self.phi = []
+
+    def save_fields(self, grid: grids.Grid1D):
+        super().save_fields(grid)
+        self.phi.append(grid.phi.copy())
+
+
+class ResultsND(Results):
+    def __init__(self):
+        super().__init__()
+        # ND results store the magnetic field B(x) and current density J(x)
+        self.J = []
+        self.B = []
+
+    def save_fields(self, grid: Union[grids.Grid1D3V, grids.Grid2D]):
+        super().save_fields(grid)
+        self.J.append(grid.J.copy())
+        self.B.append(grid.B.copy())

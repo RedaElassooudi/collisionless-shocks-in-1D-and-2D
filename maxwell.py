@@ -4,7 +4,6 @@
 #   - https://en.wikipedia.org/wiki/Relaxation_(iterative_method)
 #   - https://en.wikipedia.org/wiki/Successive_over-relaxation
 import numpy as np
-from numpy.linalg import norm
 from numba import jit
 
 from grids import Grid1D, Grid1D3V
@@ -169,6 +168,7 @@ def sor_solver2(u, f, dx, max_iter=10000, tol=1e-6, omega=1.5):
 
 
 if __name__ == "__main__":
+    from numpy.linalg import norm
     import matplotlib.pyplot as plt
     import time
 

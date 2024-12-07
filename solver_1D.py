@@ -42,6 +42,8 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
 
     t = 0  # Time in the simulation
     step = 0  # Number of iterations
+    # TODO: We need a proper definition of unit_time, iterating to t = 1 takes EXTREMELY long (using SOR)
+    # => What does it mean to simulate until t = 1?
     while t < params.t_max:
         step += 1
 
@@ -76,8 +78,8 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
             newton.advance_positions(electrons, dt)
             newton.advance_positions(ions, dt)
 
-        # Save results every 50 iterations
-        if step % 50 == 0:
+        # Save results every 200 iterations
+        if step % 200 == 0:
             KE = electrons.kinetic_energy() + ions.kinetic_energy()
             PE = 0.5 * eps_0 * np.sum(grid.E**2) * params.dx
             TE = KE + PE

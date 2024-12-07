@@ -12,7 +12,7 @@ def periodic_bc(electrons: Particles, ions: Particles, x_max: float):
         electrons (Particles): the electrons
         ions (Particles): the ions
         x_max (float / tuple): the size of the domain. float for 1D, tuple for 2D and 3D
-    """  
+    """
     _periodic_bc(electrons, x_max)
     _periodic_bc(ions, x_max)
 
@@ -56,8 +56,12 @@ def _open_bc(particles: Particles, x_max: float, dx: float):
         # add these electrons to the old ones
         particles.add_particles(new_x, new_v)
 
-#When using Absorbiing boundaries, make sure that the initial conditions are chosen such that there are no particles near the edges
+
 def absorbing_bc_1D(electrons: Particles, ions: Particles, x_max: float, damping_width: float):
+    """
+    When using Absorbing boundaries, make sure that the initial conditions are chosen
+    such that there are no particles near the edges
+    """
     # Apply absorbing boundary conditions at x_max (right boundary)
     _apply_damping(electrons, x_max, -damping_width)
     _apply_damping(ions, x_max, -damping_width)

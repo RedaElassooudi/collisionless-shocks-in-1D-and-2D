@@ -11,6 +11,7 @@ class Grid1D:
         self.x = np.arange(0, x_max, dx)
         self.n_cells = self.x.size
         # Cell averaged-quantities
+        # TODO: set initial conditions (same for 1D3V)
         self.E_0 = np.zeros(self.n_cells)
         self.E = np.zeros(self.n_cells)
         self.n_e = np.empty(self.n_cells)
@@ -56,15 +57,16 @@ class Grid1D3V:
         self.B_0 = np.zeros((self.n_cells, 3))
         # Total fields
         self.E = np.zeros((self.n_cells, 3))
-        self.E[:,1:] = self.E_0[:,1:] #the x component is always calculated directly using the poisson solver so it has to be added there each timestep
-        self.J = np.zeros((self.n_cells, 3)) 
+        # the x component is always calculated directly using the poisson solver,
+        # so it has to be added there each timestep
+        self.E[:, 1:] = self.E_0[:, 1:]
+        self.J = np.zeros((self.n_cells, 3))
         self.B = np.zeros((self.n_cells, 3)) + self.B_0
-        
+
         # Cell averaged-quantities
         self.n_e = np.empty(self.n_cells)
         self.n_i = np.empty(self.n_cells)
         self.rho = np.empty(self.n_cells)
-        self.phi = np.empty(self.n_cells)
 
     def set_densities(self, electrons: Particles, ions: Particles):
         """

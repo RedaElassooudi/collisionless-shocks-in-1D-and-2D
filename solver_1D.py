@@ -1,6 +1,5 @@
 import time
 import numpy as np
-import random
 
 import boundary_conditions
 from grids import Grid1D
@@ -15,7 +14,6 @@ from time_constraint import calculate_dt_max
 
 def simulate(electrons: Particles, ions: Particles, params: Parameters):
     np.random.seed(params.seed)
-    random.seed(params.seed)
     t_start = time.time()
     if electrons.N != ions.N:
         print("Plasma with non-neutral charge")
@@ -59,8 +57,8 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
         maxwell.poisson_solver_1D(grid, electrons, ions, params)
 
         # Calculate velocities v^(n+1/2) using Newton's equation
-        newton.apply_lorenz_force_1D(grid, electrons, dt)
-        newton.apply_lorenz_force_1D(grid, ions, dt)
+        newton.lorenz_force_1D(grid, electrons, dt)
+        newton.lorenz_force_1D(grid, ions, dt)
 
         # Calculate positions x^(n+1)
         # depending on the boundary condition, the positions have to be updated before or after

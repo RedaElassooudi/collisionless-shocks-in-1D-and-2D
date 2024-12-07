@@ -1,5 +1,4 @@
 import numpy as np
-import random
 
 
 from initial_distributions import initialize_particles
@@ -10,7 +9,6 @@ import visualizations as vis
 if __name__ == "__main__":
 
     np.random.seed(42)
-    random.seed(42)
 
     num_particles = 20000  # Total number of particles (ions + electrons)
     num_cells = 200  # Number of spatial grid cells
@@ -32,10 +30,11 @@ if __name__ == "__main__":
     time_steps = [0, len(res.t) // 2, len(res.t) - 1]
 
     # Plot results
-    vis.electric_field_1D(time_steps, res.x, res.E)
-    vis.magnetic_field_1D(time_steps, res.x, res.B)
+    # Plot Ex and By
+    vis.field_ND(time_steps, res.x, res.E, 0, "Electric Field (Ex)")
+    vis.field_ND(time_steps, res.x, res.B, 1, "Magnetic Field (By)")
     vis.density_profiles_1D(time_steps, res.x, res.n_e, res.n_i)
     vis.phase_space_1D(time_steps, res.x_e, res.v_e, res.x_i, res.v_i)
-    vis.energy_evolution(res.KE, res.PE, res.TE)
+    vis.energy_evolution(res.t, res.KE, res.PE, res.TE)
     vis.velocity_profiles_1D(time_steps, res.v_e, res.v_i)
     # vis.animate_phase_space(res.x_e, res.v_e, x_max)

@@ -5,7 +5,9 @@ import matplotlib.pyplot as plt
 c = 3e8  # Speed of light in m/s
 omega_p = 1e4  # Electron plasma frequency in rad/s 
 Omega_e = 1e3  # Electron cyclotron frequency in rad/s
-
+"""
+Do we need to normalize omega and k or keep them in si systems?
+"""
 # Using np.roots to solve DR
 def solve_dispersion(k):
     # Coefficients 

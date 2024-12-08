@@ -24,6 +24,8 @@ omega_values = np.array([solve_dispersion(k) for k in k_values])
 # Plotting the dispersion relation
 plt.figure(figsize=(8, 6))
 plt.plot(k_values, omega_values)
+plt.xscale('log')
+plt.yscale('log')
 plt.xlabel("Wave Number (k) [rad/m]")
 plt.ylabel("Frequency (ω) [rad/s]")
 plt.title("Whistler Wave Dispersion Relation")

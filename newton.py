@@ -21,7 +21,7 @@ def initialize_velocities_half_step_1D(
     Function to properly initialize velocities for the leapfrog scheme at t-dt/2.
     """
     # Calculate initial electric field
-    maxwell.poisson_solver_1D(grid, electrons, ions, params, first=True)
+    maxwell.poisson_solver(grid, electrons, ions, params, first=True)
     # Apply Lorenz force backwards in time to find v^(-1/2)
     lorenz_force_1D(grid, electrons, -dt / 2)
     lorenz_force_1D(grid, ions, -dt / 2)

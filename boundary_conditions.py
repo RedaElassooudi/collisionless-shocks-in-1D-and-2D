@@ -58,6 +58,10 @@ def _open_bc(particles: Particles, x_max: float, dx: float):
 
 
 def absorbing_bc_1D(electrons: Particles, ions: Particles, x_max: float, damping_width: float):
+    """
+    When using Absorbing boundaries, make sure that the initial conditions are chosen
+    such that there are no particles near the edges
+    """
     # Apply absorbing boundary conditions at x_max (right boundary)
     _apply_damping(electrons, x_max, -damping_width)
     _apply_damping(ions, x_max, -damping_width)

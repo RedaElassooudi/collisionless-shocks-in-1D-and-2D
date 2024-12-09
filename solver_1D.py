@@ -26,7 +26,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
 
     max_v = max(np.max(np.abs(electrons.v)), np.max(np.abs(ions.v)))
     dt = calculate_dt_max(params.dx, max_v, electrons.qm, safety_factor=20)
-    newton.initialize_velocities_half_step(grid, electrons, ions, params, dt)
+    newton.initialize_velocities_half_step_1D(grid, electrons, ions, params, dt)
 
     # Save data at time = 0
     KE = electrons.kinetic_energy() + ions.kinetic_energy()
@@ -52,11 +52,11 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
         t += dt
 
         # Solve the Poisson equation on the grid and set the values for rho, phi and E
-        maxwell.poisson_solver(grid, electrons, ions, params)
+        maxwell.poisson_solver_1D(grid, electrons, ions, params)
 
         # Calculate velocities v^(n+1/2) using Newton's equation
-        newton.apply_lorenz_force_1D(grid, electrons, dt)
-        newton.apply_lorenz_force_1D(grid, ions, dt)
+        newton.lorenz_force_1D(grid, electrons, dt)
+        newton.lorenz_force_1D(grid, ions, dt)
 
         # Calculate positions x^(n+1)
         # depending on the boundary condition, the positions have to be updated before or after

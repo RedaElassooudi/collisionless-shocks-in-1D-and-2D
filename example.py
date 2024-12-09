@@ -1,9 +1,14 @@
+import numpy as np
+
+
 from initial_distributions import initialize_particles
 from parameters import Parameters, BoundaryCondition
-import solver_1D
+import solver_1D3V
 import visualizations as vis
 
 if __name__ == "__main__":
+
+    np.random.seed(42)
 
     num_particles = 20000  # Total number of particles (ions + electrons)
     num_cells = 200  # Number of spatial grid cells
@@ -17,17 +22,19 @@ if __name__ == "__main__":
     bulk_velocity_e = 2.0  # Bulk velocity for electrons (towards left)
     bulk_velocity_i = 0.2  # Bulk velocity for ions (towards left)
 
-    el, io = initialize_particles(num_particles, x_max, bulk_velocity_e, bulk_velocity_i, 1)
-    params = Parameters(x_max, dx, t_max, BoundaryCondition.Open)
-    res = solver_1D.simulate(el, io, params)
+    el, io = initialize_particles(num_particles, x_max, bulk_velocity_e, bulk_velocity_i, 3)
+    params = Parameters(x_max, dx, t_max, BoundaryCondition.Periodic)
+    res = solver_1D3V.simulate(el, io, params)
 
     # Define time steps to plot (start, middle, end)
     time_steps = [0, len(res.t) // 2, len(res.t) - 1]
 
     # Plot results
-    vis.electric_field_1D(time_steps, res.x, res.E)
+    # Plot Ex and By
+    vis.field_ND(time_steps, res.x, res.E, 0, "Electric Field (Ex)")
+    vis.field_ND(time_steps, res.x, res.B, 1, "Magnetic Field (By)")
     vis.density_profiles_1D(time_steps, res.x, res.n_e, res.n_i)
     vis.phase_space_1D(time_steps, res.x_e, res.v_e, res.x_i, res.v_i)
-    vis.energy_evolution(res.KE, res.PE, res.TE)
+    vis.energy_evolution(res.t, res.KE, res.PE, res.TE)
     vis.velocity_profiles_1D(time_steps, res.v_e, res.v_i)
     # vis.animate_phase_space(res.x_e, res.v_e, x_max)

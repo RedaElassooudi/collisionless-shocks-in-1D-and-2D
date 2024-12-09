@@ -22,13 +22,25 @@ def animate_phase_space(x_e, v_e, x_max):
     ani.save("phase_space_animation.gif", writer="ffmpeg", fps=30)
 
 
-def electric_field_1D(time_steps, x, E):
+def field_1D(time_steps, x, F, name):
     for t in time_steps:
         plt.figure(figsize=(10, 6))
-        plt.plot(x[t], E[t], label=f"Time Step {t * 10}")
-        plt.title(f"Electric Field at Time Step {t * 10}")
+        plt.plot(x[t], F[t], label=f"Time Step {t * 10}")
+        plt.title(f"{name} at Time Step {t * 10}")
         plt.xlabel("Grid Cell")
-        plt.ylabel("Electric Field (E)")
+        plt.ylabel(name)
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+
+
+def field_ND(time_steps, x, F, component, name):
+    for t in time_steps:
+        plt.figure(figsize=(10, 6))
+        plt.plot(x[t], F[t][:, component], label=f"Time Step {t * 10}")
+        plt.title(f"{name} at Time Step {t * 10}")
+        plt.xlabel("Grid Cell")
+        plt.ylabel(name)
         plt.legend()
         plt.grid(True)
         plt.show()
@@ -81,13 +93,13 @@ def phase_space_1D(time_steps, xe, ve, xi, vi):
         plt.show()
 
 
-def energy_evolution(KE, PE, TE):
+def energy_evolution(t, KE, PE, TE):
     plt.figure(figsize=(10, 6))
-    plt.plot(KE, label="Kinetic Energy")
-    plt.plot(PE, label="Potential Energy")
-    plt.plot(TE, label="Total Energy")
+    plt.plot(t, KE, label="Kinetic Energy")
+    plt.plot(t, PE, label="Potential Energy")
+    plt.plot(t, TE, label="Total Energy")
     plt.title("Energy Evolution Over Time")
-    plt.xlabel("Time Step (x10)")
+    plt.xlabel("Time")
     plt.ylabel("Energy")
     plt.legend()
     plt.grid(True)

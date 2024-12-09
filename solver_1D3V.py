@@ -26,7 +26,9 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
 
     max_v = max(np.max(np.linalg.norm(electrons.v, axis=1)), np.max(np.linalg.norm(ions.v, axis=1)))
     dt = calculate_dt_max(params.dx, max_v, electrons.qm, safety_factor=20)
-    newton.initialize_velocities_half_step(grid, electrons, ions, params, dt)
+    # Calculate the fields here so that they are stored at t=0
+    maxwell.calc_curr_dens(grid, electrons, ions)
+    maxwell.calc_fields(grid, dt, params.bc)
 
     # Save data at time = 0
     KE = electrons.kinetic_energy() + ions.kinetic_energy()
@@ -49,13 +51,20 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
         dt = calculate_dt_max(params.dx, max_v, electrons.qm, safety_factor=20)
         t += dt
 
-        # Solve the Maxwell equation on the grid and set the values for J, E, B
-        # TODO
+        # Calculate densities n_e(x), n_i(x) and rho(x)
+        grid.set_densities(electrons, ions)
+        # Calculate current density (Jx(x), Jy(x), Jz(x))
         maxwell.calc_curr_dens(grid, electrons, ions)
+        # Solve the Maxwell equations:
+        # - TODO: Determine Ex via Gauss?
+        # - Determine By and Bz via Faraday
+        # - Determine Ey and Ez via Ampère
+        # - Bx fixed because 1D spatial variation
+        maxwell.calc_fields(grid, dt, params.bc)
 
-        # Calculate velocities v^(n+1/2) using Newton's equation
-        newton.boris_pusher(grid, electrons, ions, params, dt)
-        # newton.boris_pusher(grid, ions, params, dt)
+        # Calculate velocities v^(n+1) using the boris pusher
+        newton.boris_pusher_1D3V(grid, electrons, dt)
+        newton.boris_pusher_1D3V(grid, ions, dt)
 
         # Calculate positions x^(n+1)
         # depending on the boundary condition, the positions have to be updated before or after
@@ -73,7 +82,8 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
         elif params.bc is BoundaryCondition.Absorbing:
             # Absorbing bc's affect the *velocities* of the particles, so advance positions only
             # after damping of velocities has been calculated
-            # TODO: 1D -> 1D3V
+            # TODO: 1D -> 1D3V @Simon should already be fine as the only velocity that matters is the velocity in the x direction as the others don't affect the position of thge particle in the system
+            # some velocity only needs to be absorbed artificially if the particle gets to close to the edges which can only occur in the x direction
             boundary_conditions.absorbing_bc_1D(electrons, ions, params.x_max, params.damping_width)
             newton.advance_positions(electrons, dt)
             newton.advance_positions(ions, dt)

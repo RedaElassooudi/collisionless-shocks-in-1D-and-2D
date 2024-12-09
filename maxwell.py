@@ -119,6 +119,17 @@ def calc_curr_dens(grid: Grid1D3V, electrons: Particles, ions: Particles):
 
 
 def calc_fields_1D3V(grid: Grid1D3V, dt, bc):
+    """
+    Maxwell's equations for 1D3V become:
+
+    dE_x/dt = -J_x / eps_0\n
+    dE_y/dt = -J_y / eps_0 - c² dB_z/dx\n
+    dE_z/dt = -J_z / eps_0 + c² dB_y/dx\n
+    dB_x/dt = 0\n
+    dB_y/dt = dE_z/dx\n
+    dB_z/dt = -dE_y/dx\n
+    """
+    # Below is old code for staggered scheme (which doesn't work yet)
     # Ey, Ez, By, Bz are calculated using Runge-Kutta 2 and Upwind second order
     # some undesirable properties: we do not check for charge conservation for these fields
     # desirable properties: charge conservation is implemented for Ex, that is why we calculate it using poisson solver at every timestep
@@ -183,10 +194,11 @@ def calc_fields_1D3V(grid: Grid1D3V, dt, bc):
 
     if bc is BoundaryCondition.Periodic:
         # calculate the fields at the full timestep
-        B_temp[:, 1] += dt / grid.dx * (np.roll(grid.E, -1)[:, 2] - grid.E[:, 2])
-        B_temp[:, 2] += dt / grid.dx * (np.roll(grid.E, 1)[:, 1] - grid.E[:, 1])
-        E_temp[:, 1] += dt * (-grid.J[:, 1] / eps_0 + c * c / grid.dx * (np.roll(grid.B, 1)[:, 2] - grid.B[:, 2]))
-        E_temp[:, 2] += dt * (-grid.J[:, 2] / eps_0 + c * c / grid.dx * (np.roll(grid.B, -1)[:, 1] - grid.B[:, 1]))
+        # np.roll(Ez, -1) = [Ez(x1), Ez(x2), ..., Ez(xN), Ez(x0)]
+        B_temp[:, 1] += dt / grid.dx * (np.roll(grid.E[:, 2], -1) - grid.E[:, 2])
+        B_temp[:, 2] += dt / grid.dx * (np.roll(grid.E[:, 1], 1) - grid.E[:, 1])
+        E_temp[:, 1] += dt * (-grid.J[:, 1] / eps_0 + c * c / grid.dx * (np.roll(grid.B[:, 2], 1) - grid.B[:, 2]))
+        E_temp[:, 2] += dt * (-grid.J[:, 2] / eps_0 + c * c / grid.dx * (np.roll(grid.B[:, 1], -1) - grid.B[:, 1]))
     else:
         # calculate the fields at the full timestep
         B_temp[:-1, 1] += dt / grid.dx * (grid.E[1:, 2] - grid.E[:-1, 2])

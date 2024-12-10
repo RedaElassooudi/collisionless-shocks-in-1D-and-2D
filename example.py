@@ -34,7 +34,7 @@ if __name__ == "__main__":
     vis.field_ND(time_steps, res.x, res.E, 0, "Electric Field (Ex)")
     vis.field_ND(time_steps, res.x, res.B, 1, "Magnetic Field (By)")
     vis.density_profiles_1D(time_steps, res.x, res.n_e, res.n_i)
-    vis.phase_space_1D(time_steps, res.x_e, res.v_e, res.x_i, res.v_i)
     vis.energy_evolution(res.t, res.KE, res.PE, res.TE)
     vis.velocity_profiles_1D(time_steps, res.v_e, res.v_i)
+    vis.phase_space_1D(time_steps, res.x_e, res.v_e, res.x_i, res.v_i)
     # vis.animate_phase_space(res.x_e, res.v_e, x_max)

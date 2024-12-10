@@ -4,7 +4,8 @@
 #   - https://en.wikipedia.org/wiki/Relaxation_(iterative_method)
 #   - https://en.wikipedia.org/wiki/Successive_over-relaxation
 import numpy as np
-from numba import jit
+
+# from numba import jit
 
 from grids import Grid1D, Grid1D3V
 from parameters import BoundaryCondition, Parameters
@@ -52,7 +53,7 @@ def naive_poisson_solver(grid: Grid1D, dx: float):
     grid.phi[1:] = -1 * np.cumsum(np.cumsum(grid.rho[:-1])) * dx**2 / eps_0
 
 
-@jit
+# @jit
 def solve_poisson_sor(u, f, dx, bound_cond, max_iter=100000, tol=1e-4, omega=1.5):
     """
     Solve the Poisson equation: ∆u(x) = f(x)
@@ -262,7 +263,7 @@ def euler_solver_1D3V(grid: Grid1D3V, dt: float, bc: BoundaryCondition):
 # -----------------------------------------------------
 
 
-@jit
+# @jit
 def sor_solver(u, f, dx, max_iter=10000, tol=1e-6, omega=1.5):
     num_cells = np.size(f)
     norm_f = norm(f)
@@ -286,7 +287,7 @@ def sor_solver(u, f, dx, max_iter=10000, tol=1e-6, omega=1.5):
             break
 
 
-@jit
+# @jit
 def sor_solver2(u, f, dx, max_iter=10000, tol=1e-6, omega=1.5):
     num_cells = np.size(f)
     for _ in range(max_iter):

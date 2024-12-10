@@ -29,6 +29,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
     # Calculate densities n_e(x), n_i(x) and rho(x)
     grid.set_densities(electrons, ions)
     # Calculate the fields here so that they are stored at t=0
+    grid.set_densities(electrons, ions)
     maxwell.calc_curr_dens(grid, electrons, ions)
     maxwell.calc_fields_1D3V(grid, dt, params.bc)
 

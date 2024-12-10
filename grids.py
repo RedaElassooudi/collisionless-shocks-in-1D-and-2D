@@ -88,8 +88,10 @@ class Grid1D3V:
         np.add.at(self.n_i, (ions.idx + 1) % self.n_cells, ions.cic_weights)
 
         self.rho = electrons.q * self.n_e + ions.q * self.n_i
-        # Remove mean charge, I'm not sure about the physical validity of doing this?
-        self.rho -= np.mean(self.rho)
+        # Remove mean charge, I'm not sure about the physical validity of doing this? 
+        # --> is only physically correct for quasi neutrality? so might not hold for open boundary at t!= 0.
+        # Thus we might need to reconsider this for the 1D1V case as wel.
+        #self.rho -= np.mean(self.rho)
 
 
 # 2 spatial indices, 2/3 components

@@ -189,6 +189,7 @@ def calc_fields_1D3V(grid: Grid1D3V, dt, bc):
     # Solve Euler's equation to find E_x
     euler_solver_1D3V(grid, dt, bc)
 
+
     B_temp = grid.B.copy()
     E_temp = grid.E.copy()
 
@@ -220,8 +221,35 @@ def calc_fields_1D3V(grid: Grid1D3V, dt, bc):
 
 
 def euler_solver_1D3V(grid: Grid1D3V, dt: float, bc: BoundaryCondition):
-    grid.E[:, 0] += grid.dx * grid.rho / eps_0
-    raise NotImplementedError()
+    if bc is BoundaryCondition.Periodic:
+        # Solve via FFT
+        # Remove mean field, physically required for periodic boundary conditions as quasi neutrality must be maintained
+        grid.rho -= np.mean(grid.rho)
+        rho_k = np.fft.fft(grid.rho)
+        k = 2 * np.pi * np.fft.fftfreq(grid.n_cells) / grid.x_max # k = 2 * pi * n / L (n = -N/2, -N/2+1, ..., N/2-1)
+
+        # Avoid dividing by k = zero
+        E_k = np.zeros_like(rho_k)
+        nonzero = k != 0
+        E_k[nonzero] = rho_k[nonzero] / (1j * k[nonzero] * eps_0)
+        grid.E[:, 0] = np.fft.ifft(E_k) + grid.E_0[:, 0]
+    elif bc is BoundaryCondition.Absorbing:
+        # Solve using first order implicit discretization assuming E(x_0) = 0 (excluding any external fields)
+        grid.E[0,0] = 0
+        for i in range(1,grid.n_cells):
+            grid.E[i, 0] = grid[i-1, 0] + grid.dx / eps_0 * grid.rho[i]
+        grid.E[:, 0] += grid.E_0[:, 0]
+    elif bc is BoundaryCondition.Open:
+        # Solve using first order implicit discretization
+        grid.E[0,0] = 0
+        for i in range(1, grid.n_cells):
+            grid.E[i, 0] = grid[i-1, 0] + grid.dx / eps_0 * grid.rho[i]
+        # To remove any effects by setting E(x_0) = 0 we redo the calcs for E in opposite direction using E(x_N) as our starting point
+        # --> Not certain if this implementation is fully correct
+        for i in range(grid.n_cells-2, -1, -1):
+            grid.E[i, 0] = grid[i+1, 0] - grid.dx / eps_0 * grid.rho[i]
+        grid.E[:, 0] += grid.E_0[:, 0]
+
 
 
 # -----------------------------------------------------

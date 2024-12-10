@@ -26,9 +26,11 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
 
     max_v = max(np.max(np.linalg.norm(electrons.v, axis=1)), np.max(np.linalg.norm(ions.v, axis=1)))
     dt = calculate_dt_max(params.dx, max_v, electrons.qm, safety_factor=20)
+    # Calculate densities n_e(x), n_i(x) and rho(x)
+    grid.set_densities(electrons, ions)
     # Calculate the fields here so that they are stored at t=0
     maxwell.calc_curr_dens(grid, electrons, ions)
-    maxwell.calc_fields(grid, dt, params.bc)
+    maxwell.calc_fields_1D3V(grid, dt, params.bc)
 
     # Save data at time = 0
     KE = electrons.kinetic_energy() + ions.kinetic_energy()
@@ -60,7 +62,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
         # - Determine By and Bz via Faraday
         # - Determine Ey and Ez via Ampère
         # - Bx fixed because 1D spatial variation
-        maxwell.calc_fields(grid, dt, params.bc)
+        maxwell.calc_fields_1D3V(grid, dt, params.bc)
 
         # Calculate velocities v^(n+1) using the boris pusher
         newton.boris_pusher_1D3V(grid, electrons, dt)

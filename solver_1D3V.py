@@ -24,7 +24,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
     grid = Grid1D3V(params.x_max, params.dx)
     results = ResultsND()
 
-    max_v = max_v = max(np.max(np.abs(electrons.v)), np.max(np.abs(ions.v)))
+    max_v = max(np.max(np.abs(electrons.v)), np.max(np.abs(ions.v)))
     dt = calculate_dt_max(params.dx, max_v, electrons.qm, safety_factor=20)
     # Calculate densities n_e(x), n_i(x) and rho(x)
     grid.set_densities(electrons, ions)
@@ -49,7 +49,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
     while t < params.t_max:
         step += 1
 
-        max_v = max_v = max(np.max(np.abs(electrons.v)), np.max(np.abs(ions.v)))
+        max_v = max(np.max(np.abs(electrons.v)), np.max(np.abs(ions.v)))
         dt = calculate_dt_max(params.dx, max_v, electrons.qm, safety_factor=20)
         t += dt
 

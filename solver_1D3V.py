@@ -27,8 +27,9 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
     max_v = max(np.max(np.linalg.norm(electrons.v, axis=1)), np.max(np.linalg.norm(ions.v, axis=1)))
     dt = calculate_dt_max(params.dx, max_v, electrons.qm, safety_factor=20)
     # Calculate the fields here so that they are stored at t=0
+    grid.set_densities(electrons, ions)
     maxwell.calc_curr_dens(grid, electrons, ions)
-    maxwell.calc_fields(grid, dt, params.bc)
+    maxwell.calc_fields_1D3V(grid, dt, params.bc)
 
     # Save data at time = 0
     KE = electrons.kinetic_energy() + ions.kinetic_energy()

@@ -34,7 +34,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
 
     # Save data at time = 0
     KE = electrons.kinetic_energy() + ions.kinetic_energy()
-    PE = 0.5 * eps_0 * np.sum(grid.E**2) * params.dx
+    PE = (grid.dx / 2) * (eps_0 * np.sum(grid.E**2) + mu_0 * np.sum(grid.B**2))
     TE = KE + PE
     results.save(0, KE, PE, TE, grid, electrons, ions)
 
@@ -93,7 +93,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
         # Save results every 50 iterations
         if step % 50 == 0:
             KE = electrons.kinetic_energy() + ions.kinetic_energy()
-            PE = 0.5 * eps_0 * np.sum(grid.E**2) * params.dx
+            PE = (grid.dx / 2) * (eps_0 * np.sum(grid.E**2) + mu_0 * np.sum(grid.B**2))
             TE = KE + PE
             results.save(t, KE, PE, TE, grid, electrons, ions)
 

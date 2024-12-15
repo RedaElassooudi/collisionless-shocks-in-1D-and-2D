@@ -38,6 +38,7 @@ def lorenz_force_1D(grid: Grid1D, particles: Particles, dt):
 
 
 def boris_pusher_1D3V(grid: Grid1D3V, particles: Particles, dt):
+    # extra source: https://www.particleincell.com/2011/vxb-rotation/
     # Get field at particle positions
     E = (
         grid.E[particles.idx.flatten()] * (1 - particles.cic_weights)

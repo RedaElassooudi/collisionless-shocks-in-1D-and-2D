@@ -14,11 +14,11 @@ if __name__ == "__main__":
     num_cells = 200  # Number of spatial grid cells
     dx = 1.0  # Spatial step size
     x_max = num_cells * dx  # Maximum position value
-    t_max = 1.0e0
+    t_max = 0.1e0
     damping_width = x_max // 10  # Size of region where dampening will occur
 
     # Shock generation parameters
-    bulk_velocity_e = 2.0  # Bulk velocity for electrons (towards left)
+    bulk_velocity_e = 0.5  # Bulk velocity for electrons (towards left)
     bulk_velocity_i = 0.2  # Bulk velocity for ions (towards left)
 
     el, io = initialize_particles(num_particles, x_max, bulk_velocity_e, bulk_velocity_i, 3)

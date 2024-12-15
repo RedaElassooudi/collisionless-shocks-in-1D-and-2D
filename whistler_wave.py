@@ -18,7 +18,7 @@ def solve_dispersion(k):
     omega_roots = np.roots([A, -B, -C])  
     return np.max(np.real(omega_roots))
 
-k_values = np.linspace(0, 1e9, 500)  
+k_values = np.linspace(0, 1e10, 1000)  
 
 # Calculating k
 omega_values = np.array([solve_dispersion(k) for k in k_values])

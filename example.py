@@ -14,7 +14,7 @@ if __name__ == "__main__":
     num_cells = 200  # Number of spatial grid cells
     dx = 1.0  # Spatial step size
     x_max = num_cells * dx  # Maximum position value
-    t_max = 1.0e0
+    t_max = 1.0e-1
     damping_width = x_max // 10  # Size of region where dampening will occur
 
     # Shock generation parameters

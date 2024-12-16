@@ -119,7 +119,7 @@ def calc_curr_dens(grid: Grid1D3V, electrons: Particles, ions: Particles):
     np.add.at(grid.J, (ions.idx.flatten() + 1) % grid.n_cells, ions.v * ions.q * ions.cic_weights)
 
 
-def calc_fields_1D3V(grid: Grid1D3V, dt, bc):
+def calc_E_1D3V(grid: Grid1D3V, dt, bc):
     """
     Maxwell's equations for 1D3V become:
 
@@ -130,95 +130,47 @@ def calc_fields_1D3V(grid: Grid1D3V, dt, bc):
     dB_y/dt = dE_z/dx\n
     dB_z/dt = -dE_y/dx\n
     """
-    # Below is old code for staggered scheme (which doesn't work yet)
-    # Ey, Ez, By, Bz are calculated using Runge-Kutta 2 and Upwind second order
-    # some undesirable properties: we do not check for charge conservation for these fields
-    # desirable properties: charge conservation is implemented for Ex, that is why we calculate it using poisson solver at every timestep
-    # a way we might be able to track the accuracy would be by tracking charge conservation and seeing if it holds well enough for our purposes as is.
-    # if so, no further changes are needed.
-    """
-    #second order interpolation to determine J at full timesteps to second order accuracy
-    B_half = np.empty_like(grid.B)
-    E_half = np.empty_like(grid.E)
-
-
-    if bc is BoundaryCondition.Periodic:
-        #calculate the fields at half timesteps
-        B_half[:,1] = grid.B[:,1] - (dt / 2) / (2 * grid.dx) * (3 * grid.E[:,2] - 4 * np.roll(grid.E, -1)[:,2] + np.roll(grid.E, -2)[:,2])
-        B_half[:,2] = grid.B[:,2] - (dt / 2) / (2 * grid.dx) * (3 * grid.E[:,1] - 4 * np.roll(grid.E, 1)[:,1] + np.roll(grid.E, 2)[:,1])
-        E_half[:,1] = grid.E[:,1] - (dt / 2)  * (grid.J[:,1] / eps_0 +  c*c / (2 * grid.dx) * (3 * grid.B[:,2] - 4 * np.roll(grid.B, 1)[:,2] + np.roll(grid.B, 2)[:,2]))
-        E_half[:,2] = grid.E[:,2] - (dt / 2)  * (grid.J[:,2] / eps_0 +  c*c / (2 * grid.dx) * (3 * grid.B[:,1] - 4 * np.roll(grid.B, -1)[:,1] + np.roll(grid.B, -2)[:,1]))
-
-        #calculate the fields at the full timestep
-        grid.B[:,1] += - dt / (2 * grid.dx) * (3 * E_half[:,2] - 4 * np.roll(E_half, -1)[:,2] + np.roll(E_half, -2)[:,2])
-        grid.B[:,2] += - dt / (2 * grid.dx) * (3 * E_half[:,1] - 4 * np.roll(E_half, 1)[:,1] + np.roll(E_half, 2)[:,1])
-        grid.E[:,1] += - dt  * (grid.J[:,1] / eps_0 +  c*c / (2 * grid.dx) * (3 * B_half[:,2] - 4 * np.roll(B_half, 1)[:,2] + np.roll(B_half, 2)[:,2]))
-        grid.E[:,2] += - dt  * (grid.J[:,2] / eps_0 +  c*c / (2 * grid.dx) * (3 * B_half[:,1] - 4 * np.roll(B_half, -1)[:,1] + np.roll(B_half, -2)[:,1]))
-    else:
-        #calculate the fields at half timesteps
-        B_half[:-2,1] = grid.B[:-2,1] - (dt / 2) / (2 * grid.dx) * (3 * grid.E[:-2,2] - 4 * grid.E[1:-1,2] + grid.E[2:,2])
-        B_half[2:,2] = grid.B[2:,2] - (dt / 2) / (2 * grid.dx) * (3 * grid.E[2:,1] - 4 * grid.E[1:-1,1] + grid.E[:-2,1])
-        E_half[2:,1] = grid.E[2:,1] - (dt / 2)  * (grid.J[2:,1] / eps_0 +  c*c / (2 * grid.dx) * (3 * grid.B[2:,2] - 4 * grid.B[1:-1,2] + grid.B[:-2,2]))
-        E_half[:-2,2] = grid.E[:-2,2] - (dt / 2)  * (grid.J[:-2,2] / eps_0 +  c*c / (2 * grid.dx) * (3 * grid.B[:-2,1] - 4 * grid.B[1:-1,1] + grid.B[2:,1]))
-
-        #calculate the boundary values using interpolation
-        B_half[-2,1] = 3 * B_half[-3,1] - 3 * B_half[-4,1] + B_half[-5,1]
-        B_half[-1,1] = 3 * B_half[-2,1] - 3 * B_half[-3,1] + B_half[-4,1]
-        B_half[1,2] = 3 * B_half[2,2] - 3 * B_half[3,2] + B_half[4,2]
-        B_half[0,2] = 3 * B_half[1,2] - 3 * B_half[2,2] + B_half[3,2]
-        E_half[1,1] = 3 * E_half[2,1] - 3 * E_half[3,1] + E_half[4,1]
-        E_half[0,1] = 3 * E_half[1,1] - 3 * E_half[2,1] + E_half[3,1]
-        E_half[-2,2] = 3 * E_half[-3,2] - 3 * E_half[-4,2] + E_half[-5,2]
-        E_half[-1,2] = 3 * E_half[-2,2] - 3 * E_half[-3,2] + E_half[-4,2]
-
-        #calculate the fields at the full timestep
-        grid.B[:-2,1] += - dt / (2 * grid.dx) * (3 * E_half[:-2,2] - 4 * E_half[1:-1,2] + E_half[2:,2])
-        grid.B[2:,2] += - dt / (2 * grid.dx) * (3 * E_half[2:,1] - 4 * E_half[1:-1,1] + E_half[:-2,1])
-        grid.E[2:,1] += - dt  * (grid.J[2:,1] / eps_0 +  c*c / (2 * grid.dx) * (3 * B_half[2:,2] - 4 * B_half[1:-1,2] + B_half[:-2,2]))
-        grid.E[:-2,2] += - dt  * (grid.J[:-2,2] / eps_0 +  c*c / (2 * grid.dx) * (3 * B_half[:-2,1] - 4 * B_half[1:-1,1] + B_half[2:,1]))
-
-        #calculate the boundary values using interpolation
-        grid.B[-2,1] = 3 * grid.B[-3,1] - 3 * grid.B[-4,1] + grid.B[-5,1]
-        grid.B[-1,1] = 3 * grid.B[-2,1] - 3 * grid.B[-3,1] + grid.B[-4,1]
-        grid.B[1,2] = 3 * grid.B[2,2] - 3 * grid.B[3,2] + grid.B[4,2]
-        grid.B[0,2] = 3 * grid.B[1,2] - 3 * grid.B[2,2] + grid.B[3,2]
-        grid.E[1,1] = 3 * grid.E[2,1] - 3 * grid.E[3,1] + grid.E[4,1]
-        grid.E[0,1] = 3 * grid.E[1,1] - 3 * grid.E[2,1] + grid.E[3,1]
-        grid.E[-2,2] = 3 * grid.E[-3,2] - 3 * grid.E[-4,2] + grid.E[-5,2]
-        grid.E[-1,2] = 3 * grid.E[-2,2] - 3 * grid.E[-3,2] + grid.E[-4,2]
-    """
     # Solve Euler's equation to find E_x
     euler_solver_1D3V(grid, dt, bc)
-
-
-    B_temp = grid.B.copy()
-    E_temp = grid.E.copy()
 
     if bc is BoundaryCondition.Periodic:
         # calculate the fields at the full timestep
         # np.roll(Ez, -1) = [Ez(x1), Ez(x2), ..., Ez(xN), Ez(x0)]
-        B_temp[:, 1] += dt / grid.dx * (np.roll(grid.E[:, 2], -1) - grid.E[:, 2])
-        B_temp[:, 2] += dt / grid.dx * (np.roll(grid.E[:, 1], 1) - grid.E[:, 1])
-        E_temp[:, 1] += dt * (-grid.J[:, 1] / eps_0 + c * c / grid.dx * (np.roll(grid.B[:, 2], 1) - grid.B[:, 2]))
-        E_temp[:, 2] += dt * (-grid.J[:, 2] / eps_0 + c * c / grid.dx * (np.roll(grid.B[:, 1], -1) - grid.B[:, 1]))
+        grid.E[:, 1] += dt * (-grid.J[:, 1] / eps_0 + c * c / grid.dx * (np.roll(grid.B[:, 2], 1) - grid.B[:, 2]))
+        grid.E[:, 2] += dt * (-grid.J[:, 2] / eps_0 + c * c / grid.dx * (np.roll(grid.B[:, 1], -1) - grid.B[:, 1]))
     else:
         # calculate the fields at the full timestep
-        B_temp[:-1, 1] += dt / grid.dx * (grid.E[1:, 2] - grid.E[:-1, 2])
-        B_temp[1:, 2] += dt / grid.dx * (grid.E[:-1, 1] - grid.E[1:, 1])
-        E_temp[1:, 1] += dt * (-grid.J[1:, 1] / eps_0 + c * c / grid.dx * (grid.B[:-1, 2] - grid.B[1:, 2]))
-        E_temp[:-1, 2] += dt * (-grid.J[:-1, 2] / eps_0 + c * c / grid.dx * (grid.B[1:, 1] - grid.B[:-1, 1]))
+        grid.E[1:, 1] += dt * (-grid.J[1:, 1] / eps_0 + c * c / grid.dx * (grid.B[:-1, 2] - grid.B[1:, 2]))
+        grid.E[:-1, 2] += dt * (-grid.J[:-1, 2] / eps_0 + c * c / grid.dx * (grid.B[1:, 1] - grid.B[:-1, 1]))
 
         # calculate the boundary values using interpolation
-        B_temp[-1, 1] = 3 * B_temp[-2, 1] - 3 * B_temp[-3, 1] + B_temp[-4, 1]
-        B_temp[0, 2] = 3 * B_temp[1, 2] - 3 * B_temp[2, 2] + B_temp[3, 2]
-        E_temp[0, 1] = 3 * E_temp[1, 1] - 3 * E_temp[2, 1] + E_temp[3, 1]
-        E_temp[-1, 2] = 3 * E_temp[-2, 2] - 3 * E_temp[-3, 2] + E_temp[-4, 2]
+        grid.E[0, 1] = 3 * grid.E[1, 1] - 3 * grid.E[2, 1] + grid.E[3, 1]
+        grid.E[-1, 2] = 3 * grid.E[-2, 2] - 3 * grid.E[-3, 2] + grid.E[-4, 2]
 
-    # Only replace y and z components of the fields
-    # Ex has already been calculated
-    grid.E[:, 1:] = E_temp[:, 1:]
-    # Bx is constant
-    grid.B[:, 1:] = B_temp[:, 1:]
+
+def calc_B_1D3V(grid: Grid1D3V, dt, bc):
+    """
+    Maxwell's equations for 1D3V become:
+
+    dE_x/dt = -J_x / eps_0\n
+    dE_y/dt = -J_y / eps_0 - c² dB_z/dx\n
+    dE_z/dt = -J_z / eps_0 + c² dB_y/dx\n
+    dB_x/dt = 0\n
+    dB_y/dt = dE_z/dx\n
+    dB_z/dt = -dE_y/dx\n
+    """
+    if bc is BoundaryCondition.Periodic:
+        # calculate the fields at the full timestep
+        # np.roll(Ez, -1) = [Ez(x1), Ez(x2), ..., Ez(xN), Ez(x0)]
+        grid.B[:, 1] += dt / grid.dx * (np.roll(grid.E[:, 2], -1) - grid.E[:, 2])
+        grid.B[:, 2] += dt / grid.dx * (np.roll(grid.E[:, 1], 1) - grid.E[:, 1])
+    else:
+        # calculate the fields at the full timestep
+        grid.B[:-1, 1] += dt / grid.dx * (grid.E[1:, 2] - grid.E[:-1, 2])
+        grid.B[1:, 2] += dt / grid.dx * (grid.E[:-1, 1] - grid.E[1:, 1])
+        # calculate the boundary values using interpolation
+        grid.B[-1, 1] = 3 * grid.B[-2, 1] - 3 * grid.B[-3, 1] + grid.B[-4, 1]
+        grid.B[0, 2] = 3 * grid.B[1, 2] - 3 * grid.B[2, 2] + grid.B[3, 2]
 
 
 def euler_solver_1D3V(grid: Grid1D3V, dt: float, bc: BoundaryCondition):

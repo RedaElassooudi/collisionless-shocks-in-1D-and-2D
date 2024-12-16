@@ -29,11 +29,10 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
     # Calculate densities n_e(x), n_i(x) and rho(x) at t=0
     grid.set_densities(electrons, ions)
     # Calculate the x-component of the electric field at t=0 
-    # (for now Ey and Ez remain zero as we require knowledge of B and J which are known at t = 1/2dt)
+    # Initialize electric field at t = 0
     maxwell.euler_solver_1D3V(grid, dt, params.bc)
 
-    # Initialize velocities at t = -dt/2, 
-    # no B fields can be included as calculating Bz and By requires Ey and Bz which require charge currents which require v at half steps...
+    # Initialize velocities at t = -dt/2 
     newton.initialize_velocities_half_step_1D3V(grid, electrons, ions, params, -dt)
     
     # Calculate J at t = -1/2dt
@@ -41,7 +40,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
     # Calculate B at t = -1/2dt (will only be non zero if there is an external B-field E-field )
     maxwell.calc_B_1D3V(grid, -dt/2, params.bc)
     # Calculate the potential energy due to the B-field at t = -1/2dt
-    B_pot = mu_0 * np.sum(grid.B**2)
+    B_pot = np.sum(grid.B**2) / mu_0 
     # Calculate E at t = 0 using J and B at t = -dt/2
     maxwell.calc_E_1D3V(grid, dt/2, params.bc)
     # Calculate B^(1/2) using E^0
@@ -54,11 +53,11 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
 
     # Save data at time = 0
     KE = electrons.kinetic_energy() + ions.kinetic_energy()
-    PE = (grid.dx / 2) * (eps_0 * np.sum(grid.E**2) + (B_pot + mu_0 * np.sum(grid.B**2)) / 2) #average between B(t=-1/2dt) and B(t=1/2dt)
+    PE = (grid.dx / 2) * (eps_0 * np.sum(grid.E**2) + (B_pot +  np.sum(grid.B**2) / mu_0 ) / 2) #average between B(t=-1/2dt) and B(t=1/2dt)
     TE = KE + PE
     results.save(0, KE, PE, TE, grid, electrons, ions)
     # Store new B_pot
-    B_pot = mu_0 * np.sum(grid.B**2)
+    B_pot = np.sum(grid.B**2) / (mu_0 * 2)
 
     print(f"Setup phase took {time.time() - t_start:.3f} seconds")
     print("iteration        time          dt  wall-clock time [s]  Total Energy")
@@ -74,8 +73,6 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
         max_v = max(np.max(np.abs(electrons.v)), np.max(np.abs(ions.v)))
         dt = calculate_dt_max(params.dx, max_v, electrons.qm, safety_factor=20)
         t += dt
-
-        # Calculate quantities at full timesteps t = n+1
 
         # Calculate positions x^(n+1)
         # depending on the boundary condition, the positions have to be updated before or after
@@ -99,16 +96,15 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
             newton.advance_positions(electrons, dt)
             newton.advance_positions(ions, dt)
 
+        # Calculate velocities v^(n+3/2) using the boris pusher
+        newton.boris_pusher_1D3V(grid, electrons, dt)
+        newton.boris_pusher_1D3V(grid, ions, dt)
+
         # Calculate densities n_e(x), n_i(x) and rho(x) at full timestep t = n+1
         grid.set_densities(electrons, ions)
         # Calculate E^(n+1)
         maxwell.calc_E_1D3V(grid, dt, params.bc)
 
-        # Calculate staggered quantities at half timesteps t = n + 3/2
-
-        # Calculate velocities v^(n+3/2) using the boris pusher
-        newton.boris_pusher_1D3V(grid, electrons, dt)
-        newton.boris_pusher_1D3V(grid, ions, dt)
         # Calculate current density J^(n+3/2)
         maxwell.calc_curr_dens(grid, electrons, ions)
         # Calculate B^(n+3/2)
@@ -116,12 +112,12 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
         
         # Save results every 50 iterations
         if step % 50 == 0:
-            KE = electrons.kinetic_energy() + ions.kinetic_energy()
-            PE = (grid.dx / 2) * (eps_0 * np.sum(grid.E**2) + (B_pot + mu_0 * np.sum(grid.B**2)) / 2)
+            KE = (electrons.kinetic_energy() + ions.kinetic_energy())*100
+            PE = (grid.dx / 2) * (eps_0 * np.sum(grid.E**2) + (B_pot +  np.sum(grid.B**2) / mu_0 ) / 2)
             TE = KE + PE
             results.save(t, KE, PE, TE, grid, electrons, ions)
         # Store new value of B_pot
-        B_pot = mu_0 * np.sum(grid.B**2)
+        B_pot = np.sum(grid.B**2) / mu_0 
 
         # Log progress every 5 seconds
         if time.time() - t_last > 5:

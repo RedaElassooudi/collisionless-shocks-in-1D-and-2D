@@ -53,7 +53,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
 
     # Save data at time = 0
     KE = electrons.kinetic_energy() + ions.kinetic_energy()
-    PE = (grid.dx / 2) * (eps_0 * np.sum(grid.E**2) + (B_pot +  np.sum(grid.B**2) / mu_0 ) / 2) #average between B(t=-1/2dt) and B(t=1/2dt)
+    PE = (grid.dx / 2) * (eps_0 * np.sum(grid.E**2) + (B_pot +  np.sum(grid.B**2) / mu_0 )) #average between B(t=-1/2dt) and B(t=1/2dt)
     TE = KE + PE
     results.save(0, KE, PE, TE, grid, electrons, ions)
     # Store new B_pot
@@ -112,8 +112,8 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
         
         # Save results every 50 iterations
         if step % 50 == 0:
-            KE = (electrons.kinetic_energy() + ions.kinetic_energy())*100
-            PE = (grid.dx / 2) * (eps_0 * np.sum(grid.E**2) + (B_pot +  np.sum(grid.B**2) / mu_0 ) / 2)
+            KE = electrons.kinetic_energy() + ions.kinetic_energy()
+            PE = (grid.dx / 2) * (eps_0 * np.sum(grid.E**2) + (B_pot +  np.sum(grid.B**2) / mu_0 ))
             TE = KE + PE
             results.save(t, KE, PE, TE, grid, electrons, ions)
         # Store new value of B_pot

@@ -18,8 +18,8 @@ if __name__ == "__main__":
     damping_width = x_max // 10  # Size of region where dampening will occur
 
     # Shock generation parameters
-    bulk_velocity_e = 0.5  # Bulk velocity for electrons (towards left)
-    bulk_velocity_i = 0.2  # Bulk velocity for ions (towards left)
+    bulk_velocity_e = 0.2  # Bulk velocity for electrons (towards left)
+    bulk_velocity_i = 0.1  # Bulk velocity for ions (towards left)
 
     el, io = initialize_particles(num_particles, x_max, bulk_velocity_e, bulk_velocity_i, 3)
     params = Parameters(x_max, dx, t_max, BoundaryCondition.Periodic, damping_width)

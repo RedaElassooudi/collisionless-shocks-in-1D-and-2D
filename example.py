@@ -12,18 +12,37 @@ if __name__ == "__main__":
 
     num_particles = 20000  # Total number of particles (ions + electrons)
     num_cells = 200  # Number of spatial grid cells
-    dx = 1.0  # Spatial step size
-    x_max = num_cells * dx  # Maximum position value
-    t_max = 0.1e0
+
+    # dx = 1e-10  # Spatial step size
+    # x_max = num_cells * dx  # Maximum position value
+
+    x_max = 1.  # Maximum position value
+    dx = x_max / num_cells
+
+    # # t_max = 0.15e0
+    # t_max = 2.1758e-04
+    # # t_max = 1.8927e-04
+    # # t_max = 1.8858e-07
+    # damping_width = x_max // 10  # Size of region where dampening will occur
+
+    # # Shock generation parameters
+    # bulk_velocity_e = 5e-7  # Bulk velocity for electrons (towards left)
+    # bulk_velocity_i = 5e-7  # Bulk velocity for ions (towards left)
+
+    # el, io = initialize_particles(num_particles, x_max, bulk_velocity_e, bulk_velocity_i, 3)
+    # params = Parameters(x_max, dx, t_max, BoundaryCondition.Periodic, damping_width, seed=42)
+    # res = solver_1D3V.simulate(el, io, params)
+
+    max_iterations = 6000  # Maximum number of iterations
     damping_width = x_max // 10  # Size of region where dampening will occur
 
     # Shock generation parameters
-    bulk_velocity_e = 0.2  # Bulk velocity for electrons (towards left)
-    bulk_velocity_i = 0.1  # Bulk velocity for ions (towards left)
+    bulk_velocity_e = 5e-7  # Bulk velocity for electrons (towards left)
+    bulk_velocity_i = 5e-7  # Bulk velocity for ions (towards left)
 
     el, io = initialize_particles(num_particles, x_max, bulk_velocity_e, bulk_velocity_i, 3)
-    params = Parameters(x_max, dx, t_max, BoundaryCondition.Periodic, damping_width)
-    res = solver_1D3V.simulate(el, io, params)
+    params = Parameters(x_max, dx, t_max=0, bc=BoundaryCondition.Periodic, damping_width=damping_width, seed=42)
+    res = solver_1D3V.simulate(el, io, params, max_iterations)
 
     # Define time steps to plot (start, middle, end)
     time_steps = [0, len(res.t) // 2, len(res.t) - 1]

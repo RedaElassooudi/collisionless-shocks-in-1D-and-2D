@@ -136,6 +136,7 @@ def calc_fields_1D3V(grid: Grid1D3V, dt, bc):
     # desirable properties: charge conservation is implemented for Ex, that is why we calculate it using poisson solver at every timestep
     # a way we might be able to track the accuracy would be by tracking charge conservation and seeing if it holds well enough for our purposes as is.
     # if so, no further changes are needed.
+
     """
     #second order interpolation to determine J at full timesteps to second order accuracy
     B_half = np.empty_like(grid.B)
@@ -213,6 +214,8 @@ def calc_fields_1D3V(grid: Grid1D3V, dt, bc):
         B_temp[0, 2] = 3 * B_temp[1, 2] - 3 * B_temp[2, 2] + B_temp[3, 2]
         E_temp[0, 1] = 3 * E_temp[1, 1] - 3 * E_temp[2, 1] + E_temp[3, 1]
         E_temp[-1, 2] = 3 * E_temp[-2, 2] - 3 * E_temp[-3, 2] + E_temp[-4, 2]
+    
+    # print(B_temp)
 
     # Only replace y and z components of the fields
     # Ex has already been calculated

@@ -12,7 +12,7 @@ from results import ResultsND
 from time_constraint import calculate_dt_max
 
 
-def simulate(electrons: Particles, ions: Particles, params: Parameters):
+def simulate(electrons: Particles, ions: Particles, params: Parameters, max_iter):
     np.random.seed(params.seed)
     t_start = time.time()
     if electrons.N != ions.N:
@@ -30,7 +30,8 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
     grid.set_densities(electrons, ions)
     # Calculate the x-component of the electric field at t=0 
     # Initialize electric field at t = 0
-    maxwell.euler_solver_1D3V(grid, dt, params.bc)
+    # maxwell.euler_solver_1D3V(grid, dt, params.bc)
+    maxwell.calc_E_1D3V(grid, -dt/2, params.bc)
 
     # Initialize velocities at t = -dt/2 
     newton.initialize_velocities_half_step_1D3V(grid, electrons, ions, params, -dt)
@@ -42,9 +43,9 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
     # Calculate the potential energy due to the B-field at t = -1/2dt
     B_pot = np.sum(grid.B**2) / mu_0 
     # Calculate E at t = 0 using J and B at t = -dt/2
-    maxwell.calc_E_1D3V(grid, dt/2, params.bc)
+    maxwell.calc_E_1D3V(grid, dt, params.bc)
     # Calculate B^(1/2) using E^0
-    maxwell.calc_B_1D3V(grid, dt/2, params.bc)
+    maxwell.calc_B_1D3V(grid, dt, params.bc)
     # Calculate v^(1/2) and J^(1/2)
     newton.boris_pusher_1D3V(grid, electrons, dt)
     newton.boris_pusher_1D3V(grid, ions, dt)
@@ -67,7 +68,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
 
     t = 0  # Time in the simulation
     step = 0  # Number of iterations
-    while t < params.t_max:
+    while step < max_iter:
         step += 1
 
         max_v = max(np.max(np.abs(electrons.v)), np.max(np.abs(ions.v)))

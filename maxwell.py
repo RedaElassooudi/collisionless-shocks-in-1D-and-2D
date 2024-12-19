@@ -131,15 +131,17 @@ def calc_E_1D3V(grid: Grid1D3V, dt, bc):
     dB_z/dt = -dE_y/dx\n
     """
     # Solve Euler's equation to find E_x
-    euler_solver_1D3V(grid, dt, bc)
+    # euler_solver_1D3V(grid, dt, bc)
 
     if bc is BoundaryCondition.Periodic:
         # calculate the fields at the full timestep
         # np.roll(Ez, -1) = [Ez(x1), Ez(x2), ..., Ez(xN), Ez(x0)]
+        grid.E[:, 0] += dt * -grid.J[:, 0] / eps_0
         grid.E[:, 1] += dt * (-grid.J[:, 1] / eps_0 + c * c / grid.dx * (np.roll(grid.B[:, 2], 1) - grid.B[:, 2]))
         grid.E[:, 2] += dt * (-grid.J[:, 2] / eps_0 + c * c / grid.dx * (np.roll(grid.B[:, 1], -1) - grid.B[:, 1]))
     else:
         # calculate the fields at the full timestep
+        grid.E[:, 0] += dt * -grid.J[:, 0] / eps_0
         grid.E[1:, 1] += dt * (-grid.J[1:, 1] / eps_0 + c * c / grid.dx * (grid.B[:-1, 2] - grid.B[1:, 2]))
         grid.E[:-1, 2] += dt * (-grid.J[:-1, 2] / eps_0 + c * c / grid.dx * (grid.B[1:, 1] - grid.B[:-1, 1]))
 
@@ -185,7 +187,7 @@ def euler_solver_1D3V(grid: Grid1D3V, dt: float, bc: BoundaryCondition):
         E_k = np.zeros_like(rho_k)
         nonzero = k != 0
         E_k[nonzero] = rho_k[nonzero] / (1j * k[nonzero] * eps_0)
-        grid.E[:, 0] = np.fft.ifft(E_k) + grid.E_0[:, 0]
+        grid.E[:, 0] = np.fft.ifft(E_k)
     elif bc is BoundaryCondition.Absorbing:
         # Solve using first order implicit discretization assuming E(x_0) = 0 (excluding any external fields)
         grid.E[0,0] = 0

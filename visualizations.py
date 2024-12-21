@@ -85,6 +85,27 @@ def velocity_profiles_ND(time_steps, ve, vi, t, component):
         plt.show()
 
 
+def phase_space_ND(time_steps, xe, ve, xi, vi, t):
+    for ts in time_steps:
+        # Electrons
+        plt.figure(figsize=(10, 6))
+        plt.scatter(xe[ts][:, 0], ve[ts][:, 0], s=1, alpha=0.5)
+        plt.title(f"Electron Phase Space at time {t[ts]}")
+        plt.xlabel("Position (x)")
+        plt.ylabel("Velocity (v)")
+        plt.grid(True)
+        plt.show()
+
+        # Ions
+        plt.figure(figsize=(10, 6))
+        plt.scatter(xi[ts][:, 0], vi[ts][:, 0], s=1, alpha=0.5, color="red")
+        plt.title(f"Ion Phase Space at time {t[ts]}")
+        plt.xlabel("Position (x)")
+        plt.ylabel("Velocity (v)")
+        plt.grid(True)
+        plt.show()
+
+
 def phase_space_1D(time_steps, xe, ve, xi, vi, t):
     for ts in time_steps:
         # Electrons

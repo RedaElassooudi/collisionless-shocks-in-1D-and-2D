@@ -13,6 +13,7 @@ class Parameters:
     x_max: float
     dx: float
     t_max: float
+    max_iter: int
     bc: BoundaryCondition
     damping_width: float = 0
     SOR_max_iter: int = 1000

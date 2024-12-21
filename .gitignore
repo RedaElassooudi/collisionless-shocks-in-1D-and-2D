@@ -1,2 +1,4 @@
 __pycache__
 .venv
+*.code-workspace
+.ds_store

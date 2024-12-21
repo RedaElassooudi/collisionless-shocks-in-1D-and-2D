@@ -1,2 +1,4 @@
 __pycache__
 .venv
+Results/
+field_ene.txt

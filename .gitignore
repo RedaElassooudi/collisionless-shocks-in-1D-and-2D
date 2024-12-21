@@ -2,3 +2,5 @@ __pycache__
 .venv
 Results/
 field_ene.txt
+*.code-workspace
+.ds_store

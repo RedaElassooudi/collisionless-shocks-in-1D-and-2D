@@ -8,13 +8,13 @@ from physical_constants import *
 def initialize_particles(num_particles: int, x_max: float, v_bulk_e: float, v_bulk_i: float, dim: int):
     # Electrons (uniformly distributed)
     num_electrons = num_particles // 2
-    electrons = Particles(num_electrons, 1, dim, m_e, q_e)
+    electrons = Particles(num_electrons, 1, dim, m_e, q_e, -1, wp=1, xMax=x_max)
     np.copyto(electrons.x, np.random.uniform(0, x_max, (num_electrons, 1)))
     np.copyto(electrons.v, np.random.normal(v_bulk_e, v_te, (num_electrons, dim)))
 
     # Ions (density gradient)
     num_ions = num_particles - num_electrons
-    ions = Particles(num_ions, 1, dim, m_i, q_i)
+    ions = Particles(num_ions, 1, dim, m_i, q_i, 1 / 1836, wp=1 / np.sqrt(1836), xMax=x_max)
     num_ions_left = int(num_ions * 0.7)  # 70% ions on the left half
     num_ions_right = num_ions - num_ions_left  # Remaining ions on the right half
 
@@ -35,7 +35,7 @@ def two_stream(num_particles: int, x_max: float, v_the: float, v_bulk: float):
     # Charge neutrality: n_e = n_i
     num_electrons = num_ions = num_particles // 2
 
-    electrons = Particles(num_electrons, 1, 3, m_e, q_e)
+    electrons = Particles(num_electrons, 1, 3, m_e, q_e, qm=-1, wp=1, xMax=x_max)
     # endpoint = False makes sure the last particle has position x_n < x_max
     np.copyto(electrons.x, np.random.uniform(0, x_max, (num_electrons, 1)))
     # electrons.x = np.linspace(
@@ -54,7 +54,7 @@ def two_stream(num_particles: int, x_max: float, v_the: float, v_bulk: float):
     pm = 1 - 2 * np.mod(pm + 1, 2)
     electrons.v[:, 0] += pm * v_bulk  # Drift plus thermal spread
 
-    ions = Particles(num_ions, 1, 3, m_i, q_i)
+    ions = Particles(num_ions, 1, 3, m_i, q_i, qm=1 / 1836, wp=1 / np.sqrt(1836), xMax=x_max)
     np.copyto(ions.x, np.random.uniform(0, x_max, (num_ions, 1)))
     # ions.x = np.linspace(0, (1 - (1 / 200)) * x_max, num_ions, endpoint=False).reshape(
     #     num_ions, 1

@@ -3,16 +3,27 @@ import numpy.typing as npt
 
 
 class Particles:
-    def __init__(self, num_particles: int, dimX: int, dimV: int, mass: float, charge: float):
+    def __init__(
+        self,
+        num_particles: int,
+        dimX: int,
+        dimV: int,
+        mass: float,
+        charge: float,
+        qm: float,
+        wp: float,
+        xMax: float,
+    ):
         self.x = np.empty((num_particles, dimX))
         self.v = np.empty((num_particles, dimV))
         self.idx: npt.NDArray = None
         # TODO: add extra dimension to store weights for higher order b-splines?
         self.cic_weights: npt.NDArray = None
-        self.m = mass
-        self.q = charge
-        self.qm = charge / mass
         self.N = num_particles
+        self.m = mass
+        # self.q = charge
+        self.qm = qm
+        self.q = wp**2 / (qm * self.N / xMax)
         self.dimX = dimX
         self.dimV = dimV
 
@@ -38,4 +49,4 @@ class Particles:
         Return the total kinetic energy of the particles
         KE = 1/2 * m * sum_{j=1}^{N} v_j**2
         """
-        return 0.5 * self.m * np.sum(self.v**2)
+        return 0.5 * self.q / self.qm * np.sum(self.v**2)

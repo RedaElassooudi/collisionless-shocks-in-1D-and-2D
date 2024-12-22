@@ -23,11 +23,6 @@ def initialize_particles(num_particles: int, x_max: float, v_bulk_e: float, v_bu
     np.copyto(ions.x, np.concatenate((x_i_left, x_i_right)))
     np.copyto(ions.v, np.random.normal(v_bulk_i, v_ti, (num_ions, dim)))
 
-    print(electrons.x.shape)
-    print(electrons.v.shape)
-    print(ions.x.shape)
-    print(ions.v.shape)
-
     return electrons, ions
 
 
@@ -60,10 +55,5 @@ def two_stream(num_particles: int, x_max: float, v_the: float, v_bulk: float):
     #     num_ions, 1
     # )
     ions.v.fill(0)
-
-    print(electrons.x.shape)
-    print(electrons.v.shape)
-    print(ions.x.shape)
-    print(ions.v.shape)
 
     return electrons, ions

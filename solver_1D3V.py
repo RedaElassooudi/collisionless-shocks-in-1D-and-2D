@@ -125,6 +125,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
             print(f"{step:9}{t:12.4e}{dt:12.4e}{t_last - t_start:21.3e}{TE:14.4e}")
 
     print(f"{step:9}{t:12.4e}{dt:12.4e}{time.time() - t_start:21.3e}{TE:14.4e}")
-    # TODO: maybe, once we run *A LOT* of iterations, periodically save the data to a file
-    # instead of keeping everything in memory
+    print("DONE!")
+    results.write(f"Results/{int(t_start)}")
+    print(f"Results saved in Results/{int(t_start)}/")
     return results

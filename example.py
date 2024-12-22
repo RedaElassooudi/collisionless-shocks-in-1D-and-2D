@@ -47,3 +47,16 @@ if __name__ == "__main__":
     vis.velocity_profiles_ND(time_steps, res.v_e, res.v_i, res.t, 0)
     vis.phase_space_ND(time_steps, res.x_e, res.v_e, res.x_i, res.v_i, res.t)
     # vis.animate_phase_space(res.x_e, res.v_e, x_max)
+
+    # You can put this code in a different file and it will still work
+    # In fact, you are meant to put it in a different file.
+    # You should run the code once, and then perform multiple inspections / visualizations
+    # with code like below without having to recompute everything
+    # (Make sure to change the directory name, as the number will be different)
+    # The number represents the time in seconds since 00:00:00 UTC 1 Jan 1970
+    # Make sure you use the correct names for the different variables (see results.py for their names)
+    # KE = Results.read("Results/1734833451/", "KE")
+    # PE = Results.read("Results/1734833451/", "PE")
+    # TE = Results.read("Results/1734833451/", "TE")
+    # t = Results.read("Results/1734833451/", "t")
+    # vis.energy_evolution(t, KE, PE, TE)

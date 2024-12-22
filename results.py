@@ -1,3 +1,5 @@
+import os
+import pickle
 from typing import Union
 
 import grids
@@ -72,6 +74,46 @@ class Results:
 
     def save_cells(self, grid: Union[grids.Grid1D, grids.Grid1D3V, grids.Grid2D]):
         self.x.append(grid.x.copy())
+
+    @staticmethod
+    def read(dirname, dataname):
+        """
+        Read the list in dirname/dataname.pkl
+        Returns a python list [] with the results
+        """
+        file = os.path.join(dirname, f"{dataname}.pkl")
+        with open(file, "rb") as f:
+            data = pickle.load(f)
+        return data
+
+    def write(self, dirname):
+        """
+        Save the results in a file under "dirname/".
+        Each variable gets its own file.
+        Currently we store everything in memory until the end, then we write
+        -> inefficient when datasize increases too much.
+        """
+        os.makedirs(dirname, exist_ok=True)
+
+        names_dict = {
+            "t": self.t,
+            "KE": self.KE,
+            "PE": self.PE,
+            "TE": self.TE,
+            "n_e": self.n_e,
+            "n_i": self.n_i,
+            "x_e": self.x_e,
+            "v_e": self.v_e,
+            "x_i": self.x_i,
+            "v_i": self.v_i,
+            "E": self.E,
+            "x": self.x,
+        }
+
+        for dataname, data in names_dict.items():
+            file = os.path.join(dirname, f"{dataname}.pkl")
+            with open(file, "wb") as f:
+                pickle.dump(data, f)
 
 
 class Results1D(Results):

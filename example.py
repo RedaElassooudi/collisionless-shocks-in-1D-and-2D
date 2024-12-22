@@ -29,7 +29,9 @@ def main():
     # Fabio code: instability occurs at w_pe * t = 25
     V0 = 0.9  # Stream velocity
     VT = 0.00000001  # Thermal speed
-    el, io = two_stream(num_particles, x_max, VT, V0)
+    pert_amp = 0.0001  # Perturbation amplitude
+    mode = 3  # wave mode to activate
+    el, io = two_stream(num_particles, x_max, VT, V0, num_cells, pert_amp, mode)
     params = Parameters(x_max, dx, t_max, max_iter, BoundaryCondition.Periodic, damping_width)
     res = solver_1D3V.simulate(el, io, params)
 

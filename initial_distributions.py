@@ -32,10 +32,8 @@ def two_stream(num_particles: int, x_max: float, v_the: float, v_bulk: float):
 
     electrons = Particles(num_electrons, 1, 3, m_e, q_e)
     # endpoint = False makes sure the last particle has position x_n < x_max
-    np.copyto(electrons.x, np.random.uniform(0, x_max, (num_electrons, 1)))
-    # electrons.x = np.linspace(
-    #     0, (1 - (1 / 200)) * x_max, num_electrons, endpoint=False
-    # ).reshape(num_electrons, 1)
+    # np.copyto(electrons.x, np.random.uniform(0, x_max, (num_electrons, 1)))
+    electrons.x = np.linspace(0, (1 - (1 / 400)) * x_max, num_electrons, endpoint=False).reshape(num_electrons, 1)
 
     XP1 = 0.0001
     mode = 3
@@ -50,10 +48,8 @@ def two_stream(num_particles: int, x_max: float, v_the: float, v_bulk: float):
     electrons.v[:, 0] += pm * v_bulk  # Drift plus thermal spread
 
     ions = Particles(num_ions, 1, 3, m_i, q_i)
-    np.copyto(ions.x, np.random.uniform(0, x_max, (num_ions, 1)))
-    # ions.x = np.linspace(0, (1 - (1 / 200)) * x_max, num_ions, endpoint=False).reshape(
-    #     num_ions, 1
-    # )
+    # np.copyto(ions.x, np.random.uniform(0, x_max, (num_ions, 1)))
+    ions.x = np.linspace(0, (1 - (1 / 400)) * x_max, num_ions, endpoint=False).reshape(num_ions, 1)
     ions.v.fill(0)
 
     return electrons, ions

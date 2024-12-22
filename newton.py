@@ -1,6 +1,6 @@
 import numpy as np
 
-from grids import Grid1D, Grid1D3V
+from grids import Grid1D, Grid1D3V, Grid2D
 import maxwell
 from parameters import Parameters
 from particles import Particles
@@ -37,7 +37,7 @@ def lorenz_force_1D(grid: Grid1D, particles: Particles, dt):
     particles.v += particles.qm * E * dt
 
 
-def initialize_velocities_half_step_1D3V(grid: Grid1D, electrons: Particles, ions: Particles, params: Parameters, dt: float):
+def initialize_velocities_half_step_1D3V(grid: Grid1D3V, electrons: Particles, ions: Particles, params: Parameters, dt: float):
     # Apply Lorenz force backwards in time to find v^(-1/2)
     boris_pusher_1D3V(grid, electrons, dt / 2)
     boris_pusher_1D3V(grid, ions, dt / 2)
@@ -53,6 +53,46 @@ def boris_pusher_1D3V(grid: Grid1D3V, particles: Particles, dt):
     B = (
         grid.B[particles.idx.flatten()] * (1 - particles.cic_weights)
         + grid.B[(particles.idx.flatten() + 1) % grid.n_cells] * particles.cic_weights
+    )
+    # Calculate v⁻ = v_n + 𝜖
+    particles.v += particles.qm * E * dt / 2
+
+    beta = particles.qm * B * dt / 2
+    beta_sq = np.einsum("ij,ij->i", beta, beta)
+    beta_sq = beta_sq[:, np.newaxis]
+    s = (2 * beta) / (1 + beta_sq)
+    # Calculate v⁻ + (v⁻ + (v⁻ × β)) × s
+    particles.v += np.cross(particles.v + np.cross(particles.v, beta), s)
+
+    # v_n+1 = previous + 𝜖
+    particles.v += particles.qm * E * dt / 2
+
+
+def initialize_velocities_half_step_2D(grid: Grid2D, electrons: Particles, ions: Particles, params: Parameters, dt: float):
+    # Apply Lorenz force backwards in time to find v^(-1/2)
+    boris_pusher_2D(grid, electrons, dt / 2)
+    boris_pusher_2D(grid, ions, dt / 2)
+
+
+def boris_pusher_2D(grid: Grid2D, particles: Particles, dt):
+    # extra source: https://www.particleincell.com/2011/vxb-rotation/
+    # Create arrays to get adjacent cell coordinates
+    x_adj = np.zeros((grid.n_cells, 2))
+    y_adj = np.zeros((grid.n_cells, 2))
+    x_adj[:,0] = 1
+    y_adj[:,1] = 1
+    # Get field at particle positions
+    E = (
+        grid.E[particles.idx[:,0].flatten()] * (1 - particles.cic_weights[:,0]) * (1 - particles.cic_weights[:,1])
+        + grid.E[(particles.idx + x_adj ) % grid.n_cells] * particles.cic_weights[:,0] * (1 - particles.cic_weights[:,1])
+        + grid.E[(particles.idx + y_adj) % grid.n_cells] * particles.cic_weights[:,1] * (1 - particles.cic_weights[:,0])
+        + grid.E[(particles.idx + x_adj + y_adj) % grid.n_cells] * particles.cic_weights[:,1] * particles.cic_weights[:,0]
+    )
+    B = (
+        grid.B[particles.idx.flatten()] * (1 - particles.cic_weights[:,0]) * (1 - particles.cic_weights[:,1])
+        + grid.B[(particles.idx + x_adj) % grid.n_cells] * particles.cic_weights[:,0] * (1 - particles.cic_weights[:,1])
+        + grid.B[(particles.idx + y_adj) % grid.n_cells] * particles.cic_weights[:,1] * (1 - particles.cic_weights[:,0])
+        + grid.B[(particles.idx + x_adj + y_adj) % grid.n_cells] * particles.cic_weights[:,1] * particles.cic_weights[:,0]
     )
     # Calculate v⁻ = v_n + 𝜖
     particles.v += particles.qm * E * dt / 2

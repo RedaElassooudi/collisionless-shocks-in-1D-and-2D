@@ -2,7 +2,7 @@ from math import sqrt
 
 
 # Function that determines the optimal timestep based on the CFL condition and the plasma frequency condition
-def calculate_dt_max(dx, v, qm_e, safety_factor=5):
+def calculate_dt_max(dx, v, qm_e, dimx, safety_factor=5):
     """
     Determine the maximal timestep based on the CFL and plasma frequency conditions:
         - dt < dx / v
@@ -13,7 +13,7 @@ def calculate_dt_max(dx, v, qm_e, safety_factor=5):
     # TODO: i'm not fully convinced what the conditions on dt should be using normalized units
 
     # CFL condition (particle shouldn't cross more than one cell per timestep)
-    dt_cfl = dx / v
+    dt_cfl = dx / v * sqrt(dimx)
 
     # Plasma frequency condition
     # TODO: likely wrong, w_p = sqrt((n * q^2) / (m * eps)) -> How to find n?

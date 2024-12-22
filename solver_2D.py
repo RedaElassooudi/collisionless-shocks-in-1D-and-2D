@@ -2,7 +2,7 @@ import time
 import numpy as np
 
 import boundary_conditions
-from grids import Grid1D3V
+from grids import Grid2D
 import maxwell
 import newton
 from parameters import BoundaryCondition, Parameters
@@ -21,7 +21,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
     if params.bc is BoundaryCondition.Absorbing:
         assert params.damping_width > 0, "If using absorbing boundary condition, the damping width must be set"
 
-    grid = Grid1D3V(params.x_max, params.dx)
+    grid = Grid2D(params.x_max, params.dx)
     results = ResultsND()
 
     max_v = max(np.max(np.abs(electrons.v)), np.max(np.abs(ions.v)))
@@ -31,25 +31,25 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
     # Calculate the x-component of the electric field at t=0
     # Initialize electric field at t = 0
     # maxwell.euler_solver_1D3V(grid, dt, params.bc)
-    maxwell.calc_E_1D3V(grid, -dt / 2, params.bc)
+    maxwell.calc_E_2D(grid, -dt / 2, params.bc)
 
     # Initialize velocities at t = -dt/2
-    newton.initialize_velocities_half_step_1D3V(grid, electrons, ions, params, -dt)
+    newton.initialize_velocities_half_step_2D(grid, electrons, ions, params, -dt)
 
     # Calculate J at t = -1/2dt
-    maxwell.calc_curr_dens_1D3V(grid, electrons, ions)
+    maxwell.calc_curr_dens_2D(grid, electrons, ions)
     # Calculate B at t = -1/2dt (will only be non zero if there is an external B-field E-field )
     maxwell.calc_B_1D3V(grid, -dt / 2, params.bc)
     # Calculate the potential energy due to the B-field at t = -1/2dt
     B_pot = np.sum(grid.B**2) / mu_0
     # Calculate E at t = 0 using J and B at t = -dt/2
-    maxwell.calc_E_1D3V(grid, dt, params.bc)
+    maxwell.calc_E_2D(grid, dt, params.bc)
     # Calculate B^(1/2) using E^0
-    maxwell.calc_B_1D3V(grid, dt, params.bc)
+    maxwell.calc_B_2D(grid, dt, params.bc)
     # Calculate v^(1/2) and J^(1/2)
-    newton.boris_pusher_1D3V(grid, electrons, dt)
-    newton.boris_pusher_1D3V(grid, ions, dt)
-    maxwell.calc_curr_dens_1D3V(grid, electrons, ions)
+    newton.boris_pusher_2D(grid, electrons, dt)
+    newton.boris_pusher_2D(grid, ions, dt)
+    maxwell.calc_curr_dens_2D(grid, electrons, ions)
 
     # Save data at time = 0
     KE = electrons.kinetic_energy() + ions.kinetic_energy()
@@ -106,9 +106,9 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
         maxwell.calc_E_1D3V(grid, dt, params.bc)
 
         # Calculate current density J^(n+3/2)
-        maxwell.calc_curr_dens_1D3V(grid, electrons, ions)
+        maxwell.calc_curr_dens(grid, electrons, ions)
         # Calculate B^(n+3/2)
-        maxwell.calc_B_1D3V(grid, dt, params.bc)
+        maxwell.calc_E_1D3V(grid, dt, params.bc)
 
         # Save results every 50 iterations
         if step % 50 == 0:

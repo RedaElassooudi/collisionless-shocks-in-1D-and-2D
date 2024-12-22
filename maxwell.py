@@ -7,7 +7,7 @@ import numpy as np
 
 # from numba import jit
 
-from grids import Grid1D, Grid1D3V
+from grids import Grid1D, Grid1D3V, Grid2D
 from parameters import BoundaryCondition, Parameters
 from particles import Particles
 from physical_constants import *
@@ -110,7 +110,7 @@ def thomas_solver(a, b, c, d):
     raise NotImplementedError()
 
 
-def calc_curr_dens(grid: Grid1D3V, electrons: Particles, ions: Particles):
+def calc_curr_dens_1D3V(grid: Grid1D3V, electrons: Particles, ions: Particles):
     # Current density via CIC for all three velocity components
     grid.J.fill(0)
     np.add.at(grid.J, electrons.idx.flatten(), electrons.v * electrons.q * (1 - electrons.cic_weights))
@@ -255,6 +255,69 @@ def sor_solver2(u, f, dx, max_iter=10000, tol=1e-6, omega=1.5):
             print("SOR Converged before maximum iterations!! I AM HAPPY!!")
             break
 
+
+def calc_curr_dens_2D(grid: Grid1D3V, electrons: Particles, ions: Particles):
+    # Current density via CIC for both velocity components
+    grid.J.fill(0)
+    # TODO: We're assuming periodic BC here, take into account params.bc!
+    # Create array to get the correct index for adjacent points
+    x_adj = np.zeros((grid.n_cells, 2))
+    y_adj = np.zeros((grid.n_cells, 2))
+    x_adj[:,0] = 1
+    y_adj[:,1] = 1
+    np.add.at(grid.J, electrons.idx, electrons.v * electrons.q * (1 - electrons.cic_weights[:,0]) * (1 - electrons.cic_weights[:,1]))
+    np.add.at(grid.J, (electrons.idx + x_adj) % grid.n_cells, electrons.v * electrons.q * electrons.cic_weights[:,0] * (1 - electrons.cic_weights[:,1]))
+    np.add.at(grid.J, (electrons.idx + y_adj) % grid.n_cells, electrons.v * electrons.q * electrons.cic_weights[:,1] * (1 - electrons.cic_weights[:,0]))
+    np.add.at(grid.J, (electrons.idx + x_adj + y_adj) % grid.n_cells, electrons.v * electrons.q * electrons.cic_weights[:,0] * electrons.cic_weights[:,1])
+
+    np.add.at(grid.J, ions.idx, ions.v * ions.q * (1 - ions.cic_weights[:,0]) * (1 - ions.cic_weights[:,1]))
+    np.add.at(grid.J, (ions.idx + x_adj) % grid.n_cells, ions.v * ions.q * ions.cic_weights[:,0] * (1 - ions.cic_weights[:,1]))
+    np.add.at(grid.J, (ions.idx + y_adj) % grid.n_cells, ions.v * ions.q * ions.cic_weights[:,1] * (1 - ions.cic_weights[:,0]))
+    np.add.at(grid.J, (ions.idx + x_adj + y_adj) % grid.n_cells, ions.v * ions.q * ions.cic_weights[:,0] * ions.cic_weights[:,1])
+
+
+def calc_E_2D(grid: Grid2D, dt, bc):
+    """
+    Maxwell's equations for 2D become:
+
+    dE_x/dt = -J_x / eps_0 + c² dB_z/dy\n
+    dE_y/dt = -J_y / eps_0 - c² dB_z/dx\n
+    dB_z/dt = dE_x/dy - dE_y/dx\n
+    """
+    # Solve Euler's equation to find E
+    # euler_solver_2D(grid, dt, bc)
+
+    if bc is BoundaryCondition.Periodic:
+        # calculate the fields at the full timestep
+        # np.roll(Ez, -1) = [Ez(x1), Ez(x2), ..., Ez(xN), Ez(x0)]
+        grid.E[:, :, 0] += dt * (-grid.J[:, :, 0] / eps_0 + c * c / grid.dx * (grid.B[:, :, 0] - np.roll(grid.B[:, :, 0], 1, axis=0)))
+        grid.E[:, :, 1] += dt * (-grid.J[:, :, 1] / eps_0 - c * c / grid.dx * (grid.B[:, :, 0] - np.roll(grid.B[:, :, 0], 1, axis=1)))
+    else:
+        # calculate the fields at the full timestep
+        grid.E[1:, :, 0] += dt * (-grid.J[1:, :, 0] / eps_0 + c * c / grid.dx * (grid.B[1:, :, 0] - np.roll(grid.B[:-1, :, 0], 1, axis=0)))
+        grid.E[:, 1:, 1] += dt * (-grid.J[:, 1:, 1] / eps_0 - c * c / grid.dx * (grid.B[:, 1:, 0] - np.roll(grid.B[:, :-1, 0], 1, axis=1)))
+
+        # calculate the boundary values using interpolation
+        grid.E[0, :, 0] = 3 * grid.E[1, :, 0] - 3 * grid.E[2, :, 0] + grid.E[3, :, 0]
+        grid.E[0, :, 1] = 3 * grid.E[:, 1, 1] - 3 * grid.E[:, 2, 1] + grid.E[:, 3, 1]
+
+
+def calc_B_2D(grid: Grid2D, dt, bc):
+    """
+    dB_z/dt = dE_x/dy - dE_y/dx\n
+    """
+    if bc is BoundaryCondition.Periodic:
+        # calculate the fields at the full timestep
+        # np.roll(Ez, -1) = [Ez(x1), Ez(x2), ..., Ez(xN), Ez(x0)]
+        grid.B[:, :, 0] += dt * c * c (-(np.roll(grid.E[:, :, 1], -1, axis=1) - grid.E[:, :, 1]) / grid.dx + (np.roll(grid.E[:, :, 0], -1, axis=0) - grid.E[:, :, 0]) / grid.dx)
+        
+        # calculate the fields at the full timestep
+        grid.B[:-1, :-1, 0] += dt * c * c (-(grid.E[1:, 1:, 1] - grid.E[:-1, :-1, 1]) / grid.dx + (grid.E[1:, 1:, 0] - grid.E[:-1, :-1, 0]) / grid.dx)
+
+        # calculate the boundary values using interpolation
+        grid.B[-1, :-1, 0] = 3 * grid.B[-2, :-1, 0] - 3 * grid.B[-3, :-1, 0] + grid.B[-4, :-1, 0]
+        grid.B[:-1, -1, 0] = 3 * grid.B[:-1, -2, 0] - 3 * grid.B[:-1, -3, 0] + grid.B[:-1, -4, 0]
+        grid.B[-1, -1, 0] = 3 * grid.B[-1, -2, 0] - 3 * grid.B[-1, -3, 0] + grid.B[-1, -4, 0] # last value is an interpolation of an interpolation
 
 if __name__ == "__main__":
     from numpy.linalg import norm

@@ -129,34 +129,38 @@ class Grid2D:
         electrons.idx = dummy.astype(int)
         electrons.cic_weights = dummy - electrons.idx
         self.n_e.fill(0)
-        np.add.at(self.n_e, electrons.idx, (1 - electrons.cic_weights[:,0]) * (1 - electrons.cic_weights[:,1]))
         # TODO: We're assuming periodic BC here, take into account params.bc!
         # Create array to get the correct index for adjacent points
-        x_adj = np.zeros((self.n_cells, 2))
-        y_adj = np.zeros((self.n_cells, 2))
+        x_adj = np.zeros((electrons.N, 2), dtype=int)
+        y_adj = np.zeros((electrons.N, 2), dtype=int)
         x_adj[:,0] = 1
         y_adj[:,1] = 1
-        np.add.at(self.n_e, (electrons.idx + x_adj) % self.n_cells, electrons.cic_weights[:,0] * (1 - electrons.cic_weights[:,1]))
-        np.add.at(self.n_e, (electrons.idx + y_adj) % self.n_cells, electrons.cic_weights[:,1] * (1 - electrons.cic_weights[:,0]))
-        np.add.at(self.n_e, (electrons.idx + x_adj + y_adj) % self.n_cells, electrons.cic_weights[:,0] * electrons.cic_weights[:,1])
+        np.add.at(self.n_e, (electrons.idx[:,0], electrons.idx[:,1]), (1 - electrons.cic_weights[:,0]) * (1 - electrons.cic_weights[:,1]))
+        coords = (electrons.idx + x_adj) % self.n_cells
+        np.add.at(self.n_e, (coords[:,0], coords[:,1]), electrons.cic_weights[:,0] * (1 - electrons.cic_weights[:,1]))
+        coords = (electrons.idx + y_adj) % self.n_cells
+        np.add.at(self.n_e, (coords[:,0], coords[:,1]), electrons.cic_weights[:,1] * (1 - electrons.cic_weights[:,0]))
+        coords = (electrons.idx + x_adj + y_adj) % self.n_cells
+        np.add.at(self.n_e, (coords[:,0], coords[:,1]), electrons.cic_weights[:,0] * electrons.cic_weights[:,1])
         
-
         dummy = ions.x / self.dx
         ions.idx = dummy.astype(int)
         ions.cic_weights = dummy - ions.idx
         self.n_i.fill(0)
-        np.add.at(self.n_e, ions.idx, (1 - ions.cic_weights[:,0]) * (1 - ions.cic_weights[:,1]))
         # TODO: We're assuming periodic BC here, take into account params.bc!
         # Create array to get the correct index for adjacent points
-        x_adj = np.zeros((self.n_cells, 2))
-        y_adj = np.zeros((self.n_cells, 2))
+        x_adj = np.zeros((ions.N, 2), dtype=int)
+        y_adj = np.zeros((ions.N, 2), dtype=int)
         x_adj[:,0] = 1
         y_adj[:,1] = 1
-        np.add.at(self.n_e, (ions.idx + x_adj) % self.n_cells, ions.cic_weights[:,0] * (1 - ions.cic_weights[:,1]))
-        np.add.at(self.n_e, (ions.idx + y_adj) % self.n_cells, ions.cic_weights[:,1] * (1 - ions.cic_weights[:,0]))
-        np.add.at(self.n_e, (ions.idx + x_adj + y_adj) % self.n_cells, ions.cic_weights[:,0] * ions.cic_weights[:,1])
+        np.add.at(self.n_e, (ions.idx[:,0], ions.idx[:,1]), (1 - ions.cic_weights[:,0]) * (1 - ions.cic_weights[:,1]))
+        coords = (ions.idx + x_adj) % self.n_cells
+        np.add.at(self.n_e, (coords[:,0], coords[:,1]), ions.cic_weights[:,0] * (1 - ions.cic_weights[:,1]))
+        coords = (ions.idx + y_adj) % self.n_cells
+        np.add.at(self.n_e, (coords[:,0], coords[:,1]), ions.cic_weights[:,1] * (1 - ions.cic_weights[:,0]))
+        coords = (ions.idx + x_adj + y_adj) % self.n_cells
+        np.add.at(self.n_e, (coords[:,0], coords[:,1]), ions.cic_weights[:,0] * ions.cic_weights[:,1])
         
-
         self.rho = electrons.q * self.n_e + ions.q * self.n_i
         # Remove mean charge, I'm not sure about the physical validity of doing this? 
         # --> is only physically correct for quasi neutrality? so might not hold for open boundary at t!= 0.

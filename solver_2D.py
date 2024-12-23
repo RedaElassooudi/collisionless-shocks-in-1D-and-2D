@@ -30,7 +30,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
     grid.set_densities(electrons, ions)
     # Calculate the x-component of the electric field at t=0
     # Initialize electric field at t = 0
-    # maxwell.euler_solver_1D3V(grid, dt, params.bc)
+    # maxwell.euler_solver_2D(grid, dt, params.bc)
     maxwell.calc_E_2D(grid, -dt / 2, params.bc)
 
     # Initialize velocities at t = -dt/2
@@ -39,7 +39,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
     # Calculate J at t = -1/2dt
     maxwell.calc_curr_dens_2D(grid, electrons, ions)
     # Calculate B at t = -1/2dt (will only be non zero if there is an external B-field E-field )
-    maxwell.calc_B_1D3V(grid, -dt / 2, params.bc)
+    maxwell.calc_B_2D(grid, -dt / 2, params.bc)
     # Calculate the potential energy due to the B-field at t = -1/2dt
     B_pot = np.sum(grid.B**2) / mu_0
     # Calculate E at t = 0 using J and B at t = -dt/2
@@ -97,18 +97,18 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
             newton.advance_positions(ions, dt)
 
         # Calculate velocities v^(n+3/2) using the boris pusher
-        newton.boris_pusher_1D3V(grid, electrons, dt)
-        newton.boris_pusher_1D3V(grid, ions, dt)
+        newton.boris_pusher_2D(grid, electrons, dt)
+        newton.boris_pusher_2D(grid, ions, dt)
 
         # Calculate densities n_e(x), n_i(x) and rho(x) at full timestep t = n+1
         grid.set_densities(electrons, ions)
         # Calculate E^(n+1)
-        maxwell.calc_E_1D3V(grid, dt, params.bc)
+        maxwell.calc_E_2D(grid, dt, params.bc)
 
         # Calculate current density J^(n+3/2)
-        maxwell.calc_curr_dens(grid, electrons, ions)
+        maxwell.calc_curr_dens_2D(grid, electrons, ions)
         # Calculate B^(n+3/2)
-        maxwell.calc_E_1D3V(grid, dt, params.bc)
+        maxwell.calc_E_2D(grid, dt, params.bc)
 
         # Save results every 50 iterations
         if step % 50 == 0:

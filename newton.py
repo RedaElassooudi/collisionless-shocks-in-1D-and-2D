@@ -77,32 +77,38 @@ def initialize_velocities_half_step_2D(grid: Grid2D, electrons: Particles, ions:
 def boris_pusher_2D(grid: Grid2D, particles: Particles, dt):
     # extra source: https://www.particleincell.com/2011/vxb-rotation/
     # Create arrays to get adjacent cell coordinates
-    x_adj = np.zeros((grid.n_cells, 2))
-    y_adj = np.zeros((grid.n_cells, 2))
+    x_adj = np.zeros((particles.N, 2), dtype=int)
+    y_adj = np.zeros((particles.N, 2), dtype=int)
     x_adj[:,0] = 1
     y_adj[:,1] = 1
+    # Determine arrays for adjacent cell coordinates
+    upper_x = (particles.idx + x_adj ) % grid.n_cells
+    upper_y = (particles.idx + y_adj) % grid.n_cells
+    upper_xy = (particles.idx + x_adj + y_adj) % grid.n_cells
     # Get field at particle positions
     E = (
-        grid.E[particles.idx[:,0].flatten()] * (1 - particles.cic_weights[:,0]) * (1 - particles.cic_weights[:,1])
-        + grid.E[(particles.idx + x_adj ) % grid.n_cells] * particles.cic_weights[:,0] * (1 - particles.cic_weights[:,1])
-        + grid.E[(particles.idx + y_adj) % grid.n_cells] * particles.cic_weights[:,1] * (1 - particles.cic_weights[:,0])
-        + grid.E[(particles.idx + x_adj + y_adj) % grid.n_cells] * particles.cic_weights[:,1] * particles.cic_weights[:,0]
+        grid.E[particles.idx[:,0], particles.idx[:,1]] * ((1 - particles.cic_weights[:,0]) * (1 - particles.cic_weights[:,1]))[:, np.newaxis]
+        + grid.E[upper_x[:,0], upper_x[:,1]] * (particles.cic_weights[:,0] * (1 - particles.cic_weights[:,1]))[:, np.newaxis]
+        + grid.E[upper_y[:,0], upper_y[:,1]] * (particles.cic_weights[:,1] * (1 - particles.cic_weights[:,0]))[:, np.newaxis]
+        + grid.E[upper_xy[:,0], upper_xy[:,1]] * (particles.cic_weights[:,1] * particles.cic_weights[:,0])[:, np.newaxis]
     )
     B = (
-        grid.B[particles.idx.flatten()] * (1 - particles.cic_weights[:,0]) * (1 - particles.cic_weights[:,1])
-        + grid.B[(particles.idx + x_adj) % grid.n_cells] * particles.cic_weights[:,0] * (1 - particles.cic_weights[:,1])
-        + grid.B[(particles.idx + y_adj) % grid.n_cells] * particles.cic_weights[:,1] * (1 - particles.cic_weights[:,0])
-        + grid.B[(particles.idx + x_adj + y_adj) % grid.n_cells] * particles.cic_weights[:,1] * particles.cic_weights[:,0]
+        grid.B[particles.idx[:,0], particles.idx[:,1]] * ((1 - particles.cic_weights[:,0]) * (1 - particles.cic_weights[:,1]))[:, np.newaxis]
+        + grid.B[upper_x[:,0], upper_x[:,1]] * (particles.cic_weights[:,0] * (1 - particles.cic_weights[:,1]))[:, np.newaxis]
+        + grid.B[upper_y[:,0], upper_y[:,1]] * (particles.cic_weights[:,1] * (1 - particles.cic_weights[:,0]))[:, np.newaxis]
+        + grid.B[upper_xy[:,0], upper_xy[:,1]] * (particles.cic_weights[:,1] * particles.cic_weights[:,0])[:, np.newaxis]
     )
     # Calculate v⁻ = v_n + 𝜖
     particles.v += particles.qm * E * dt / 2
 
     beta = particles.qm * B * dt / 2
-    beta_sq = np.einsum("ij,ij->i", beta, beta)
-    beta_sq = beta_sq[:, np.newaxis]
+    beta_sq = beta * beta
     s = (2 * beta) / (1 + beta_sq)
     # Calculate v⁻ + (v⁻ + (v⁻ × β)) × s
-    particles.v += np.cross(particles.v + np.cross(particles.v, beta), s)
+    # v_p = v⁻ + (v⁻ × β)
+    v_p = particles.v + np.concatenate((particles.v[:,1:] * beta, -particles.v[:,:1] * beta), axis=1)
+    # v = v⁻ + v_p × s
+    particles.v += np.concatenate((v_p[:,1:] * s, -v_p[:,:1] * s), axis=1)
 
     # v_n+1 = previous + 𝜖
     particles.v += particles.qm * E * dt / 2

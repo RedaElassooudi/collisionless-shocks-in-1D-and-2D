@@ -3,7 +3,7 @@ import numpy as np
 
 from initial_distributions import initialize_particles, two_stream
 from parameters import Parameters, BoundaryCondition
-import solver_1D3V
+import solver_2D
 import visualizations as vis
 
 if __name__ == "__main__":
@@ -14,8 +14,8 @@ if __name__ == "__main__":
     num_cells = 100  # Number of spatial grid cells
     x_max = 1.0  # Maximum position value
     dx = x_max / num_cells  # Spatial step size
-    dimx = 1
-    dimv = 3
+    dimx = 2
+    dimv = 2
 
     t_max = 3.0e2
     max_iter = 20000
@@ -33,7 +33,7 @@ if __name__ == "__main__":
     el, io = two_stream(num_particles, x_max, VT, V0)
     """
     params = Parameters(x_max, dx, t_max, max_iter, BoundaryCondition.Periodic, damping_width, dimx, dimv)
-    res = solver_1D3V.simulate(el, io, params)
+    res = solver_2D.simulate(el, io, params)
 
     # Define time steps to plot (start, middle, end)
     time_steps = [0, len(res.t) // 2, len(res.t) - 1]

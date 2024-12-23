@@ -220,7 +220,7 @@ def euler_solver_1D3V(grid: Grid1D3V, dt: float, bc: BoundaryCondition):
 # @jit
 def sor_solver(u, f, dx, max_iter=10000, tol=1e-6, omega=1.5):
     num_cells = np.size(f)
-    norm_f = norm(f)
+    norm_f = np.norm(f)
     dx2 = dx**2
     # Dividing is a costly operation which is performed max_iter * num_cells times.
     # Replacing it with a multiplication saves a considerable amount of time
@@ -261,19 +261,29 @@ def calc_curr_dens_2D(grid: Grid1D3V, electrons: Particles, ions: Particles):
     grid.J.fill(0)
     # TODO: We're assuming periodic BC here, take into account params.bc!
     # Create array to get the correct index for adjacent points
-    x_adj = np.zeros((grid.n_cells, 2))
-    y_adj = np.zeros((grid.n_cells, 2))
+    x_adj = np.zeros((electrons.N, 2), dtype=int)
+    y_adj = np.zeros((electrons.N, 2), dtype=int)
     x_adj[:,0] = 1
     y_adj[:,1] = 1
-    np.add.at(grid.J, electrons.idx, electrons.v * electrons.q * (1 - electrons.cic_weights[:,0]) * (1 - electrons.cic_weights[:,1]))
-    np.add.at(grid.J, (electrons.idx + x_adj) % grid.n_cells, electrons.v * electrons.q * electrons.cic_weights[:,0] * (1 - electrons.cic_weights[:,1]))
-    np.add.at(grid.J, (electrons.idx + y_adj) % grid.n_cells, electrons.v * electrons.q * electrons.cic_weights[:,1] * (1 - electrons.cic_weights[:,0]))
-    np.add.at(grid.J, (electrons.idx + x_adj + y_adj) % grid.n_cells, electrons.v * electrons.q * electrons.cic_weights[:,0] * electrons.cic_weights[:,1])
+    np.add.at(grid.J, (electrons.idx[:,0], electrons.idx[:,1]), electrons.v * electrons.q * (1 - electrons.cic_weights[:,:1]) * (1 - electrons.cic_weights[:,1:]))
+    coord = (electrons.idx + x_adj) % grid.n_cells
+    np.add.at(grid.J, (coord[:,0], coord[:,1]), electrons.v * electrons.q * electrons.cic_weights[:,:1] * (1 - electrons.cic_weights[:,1:]))
+    coord = (electrons.idx + y_adj) % grid.n_cells
+    np.add.at(grid.J, (coord[:,0], coord[:,1]), electrons.v * electrons.q * electrons.cic_weights[:,1:] * (1 - electrons.cic_weights[:,:1]))
+    coord = (electrons.idx + x_adj + y_adj) % grid.n_cells
+    np.add.at(grid.J, (coord[:,0], coord[:,1]), electrons.v * electrons.q * electrons.cic_weights[:,:1] * electrons.cic_weights[:,1:])
 
-    np.add.at(grid.J, ions.idx, ions.v * ions.q * (1 - ions.cic_weights[:,0]) * (1 - ions.cic_weights[:,1]))
-    np.add.at(grid.J, (ions.idx + x_adj) % grid.n_cells, ions.v * ions.q * ions.cic_weights[:,0] * (1 - ions.cic_weights[:,1]))
-    np.add.at(grid.J, (ions.idx + y_adj) % grid.n_cells, ions.v * ions.q * ions.cic_weights[:,1] * (1 - ions.cic_weights[:,0]))
-    np.add.at(grid.J, (ions.idx + x_adj + y_adj) % grid.n_cells, ions.v * ions.q * ions.cic_weights[:,0] * ions.cic_weights[:,1])
+    x_adj = np.zeros((ions.N, 2), dtype=int)
+    y_adj = np.zeros((ions.N, 2), dtype=int)
+    x_adj[:,0] = 1
+    y_adj[:,1] = 1
+    np.add.at(grid.J, (ions.idx[:,0], ions.idx[:,1]), ions.v * ions.q * (1 - ions.cic_weights[:,:1]) * (1 - ions.cic_weights[:,1:]))
+    coord = (ions.idx + x_adj) % grid.n_cells
+    np.add.at(grid.J, (coord[:,0], coord[:,1]), ions.v * ions.q * ions.cic_weights[:,:1] * (1 - ions.cic_weights[:,1:]))
+    coord = (ions.idx + y_adj) % grid.n_cells
+    np.add.at(grid.J, (coord[:,0], coord[:,1]), ions.v * ions.q * ions.cic_weights[:,1:] * (1 - ions.cic_weights[:,:1]))
+    coord = (ions.idx + x_adj + y_adj) % grid.n_cells
+    np.add.at(grid.J, (coord[:,0], coord[:,1]), ions.v * ions.q * ions.cic_weights[:,:1] * ions.cic_weights[:,1:])
 
 
 def calc_E_2D(grid: Grid2D, dt, bc):
@@ -310,7 +320,7 @@ def calc_B_2D(grid: Grid2D, dt, bc):
         # calculate the fields at the full timestep
         # np.roll(Ez, -1) = [Ez(x1), Ez(x2), ..., Ez(xN), Ez(x0)]
         grid.B[:, :, 0] += dt * c * c (-(np.roll(grid.E[:, :, 1], -1, axis=1) - grid.E[:, :, 1]) / grid.dx + (np.roll(grid.E[:, :, 0], -1, axis=0) - grid.E[:, :, 0]) / grid.dx)
-        
+    else:
         # calculate the fields at the full timestep
         grid.B[:-1, :-1, 0] += dt * c * c (-(grid.E[1:, 1:, 1] - grid.E[:-1, :-1, 1]) / grid.dx + (grid.E[1:, 1:, 0] - grid.E[:-1, :-1, 0]) / grid.dx)
 
@@ -319,6 +329,7 @@ def calc_B_2D(grid: Grid2D, dt, bc):
         grid.B[:-1, -1, 0] = 3 * grid.B[:-1, -2, 0] - 3 * grid.B[:-1, -3, 0] + grid.B[:-1, -4, 0]
         grid.B[-1, -1, 0] = 3 * grid.B[-1, -2, 0] - 3 * grid.B[-1, -3, 0] + grid.B[-1, -4, 0] # last value is an interpolation of an interpolation
 
+"""
 if __name__ == "__main__":
     from numpy.linalg import norm
     import matplotlib.pyplot as plt
@@ -339,3 +350,4 @@ if __name__ == "__main__":
     plt.plot(x, u)
     plt.plot(x, -np.sin(x), "--")
     plt.show()
+"""

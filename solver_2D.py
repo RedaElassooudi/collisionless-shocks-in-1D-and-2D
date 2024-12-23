@@ -108,7 +108,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
         # Calculate current density J^(n+3/2)
         maxwell.calc_curr_dens_2D(grid, electrons, ions)
         # Calculate B^(n+3/2)
-        maxwell.calc_E_2D(grid, dt, params.bc)
+        maxwell.calc_B_2D(grid, dt, params.bc)
 
         # Save results every 50 iterations
         if step % 50 == 0:

@@ -1,5 +1,7 @@
 import time
 import numpy as np
+from dateutil.parser import isoparse
+from dateutil.relativedelta import relativedelta
 
 import boundary_conditions
 from grids import Grid1D3V
@@ -10,6 +12,7 @@ from particles import Particles
 from physical_constants import *
 from results import ResultsND
 from time_constraint import calculate_dt_max
+
 
 
 def simulate(electrons: Particles, ions: Particles, params: Parameters):
@@ -108,7 +111,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
         # Calculate current density J^(n+3/2)
         maxwell.calc_curr_dens(grid, electrons, ions)
         # Calculate B^(n+3/2)
-        maxwell.calc_E_1D3V(grid, dt, params.bc)
+        maxwell.calc_B_1D3V(grid, dt, params.bc)
 
         # Save results every 50 iterations
         if step % 50 == 0:
@@ -126,6 +129,9 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
 
     print(f"{step:9}{t:12.4e}{dt:12.4e}{time.time() - t_start:21.3e}{TE:14.4e}")
     print("DONE!")
-    results.write(f"Results/{int(t_start)}")
-    print(f"Results saved in Results/{int(t_start)}/")
+
+    date = isoparse('1970-01-01T00:00:00.00') + relativedelta(seconds = t_start)
+    date_str = str(date)[0:10] + 'T' +  str(date)[11:13] + 'h' + str(date)[14:16]  + '_' + str(date)[17:19]
+    results.write(f"Results/{date_str}")
+    print(f"Results saved in Results/{date_str}/")
     return results

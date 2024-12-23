@@ -3,7 +3,7 @@ import numpy as np
 
 from initial_distributions import initialize_particles, two_stream
 from parameters import Parameters, BoundaryCondition
-import solver_2D
+import solver_1D3V
 import visualizations as vis
 
 if __name__ == "__main__":
@@ -14,8 +14,8 @@ if __name__ == "__main__":
     num_cells = 100  # Number of spatial grid cells
     x_max = 1.0  # Maximum position value
     dx = x_max / num_cells  # Spatial step size
-    dimx = 2
-    dimv = 2
+    dimx = 1
+    dimv = 3
 
     t_max = 3.0e2
     max_iter = 20000
@@ -24,16 +24,16 @@ if __name__ == "__main__":
     # Shock generation parameters
     bulk_velocity_e = 5e-7  # Bulk velocity for electrons (towards left)
     bulk_velocity_i = 5e-7  # Bulk velocity for ions (towards left)
-    
+    """
     el, io = initialize_particles(num_particles, x_max, bulk_velocity_e, bulk_velocity_i, dimx, dimv)
     """
     # Fabio code: instability occurs at w_pe * t = 25
     V0 = 0.9  # Stream velocity
     VT = 0.00000001  # Thermal speed
     el, io = two_stream(num_particles, x_max, VT, V0)
-    """
+    
     params = Parameters(x_max, dx, t_max, max_iter, BoundaryCondition.Periodic, damping_width, dimx, dimv)
-    res = solver_2D.simulate(el, io, params)
+    res = solver_1D3V.simulate(el, io, params)
 
     # Define time steps to plot (start, middle, end)
     time_steps = [0, len(res.t) // 2, len(res.t) - 1]

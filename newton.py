@@ -51,9 +51,10 @@ def boris_pusher_1D3V(grid: Grid1D3V, particles: Particles, dt):
         + grid.E[(particles.idx.flatten() + 1) % grid.n_cells] * particles.cic_weights
     )
     B = (
-        grid.B[particles.idx.flatten()] * (1 - particles.cic_weights)
-        + grid.B[(particles.idx.flatten() + 1) % grid.n_cells] * particles.cic_weights
+        grid.B[particles.idx_staggered.flatten()] * (1 - particles.cic_weights_staggered)
+        + grid.B[(particles.idx_staggered.flatten() + 1) % grid.n_cells] * particles.cic_weights_staggered
     )
+
     # Calculate v⁻ = v_n + 𝜖
     particles.v += particles.qm * E * dt / 2
 
@@ -62,7 +63,16 @@ def boris_pusher_1D3V(grid: Grid1D3V, particles: Particles, dt):
     beta_sq = beta_sq[:, np.newaxis]
     s = (2 * beta) / (1 + beta_sq)
     # Calculate v⁻ + (v⁻ + (v⁻ × β)) × s
-    particles.v += np.cross(particles.v + np.cross(particles.v, beta), s)
+    # v_p = v⁻ + (v⁻ × β)
+    v_p = particles.v + np.cross(particles.v, beta)
+    v_p = particles.v + np.concatenate((particles.v[:,1:2] * beta[:,2:] - particles.v[:,2:] * beta[:,1:2],
+                                        particles.v[:,2:] * beta[:,:1] - particles.v[:,:1] * beta[:,2:] ,
+                                        particles.v[:,:1] * beta[:,1:2] - particles.v[:,1:2] * beta[:,:1]), axis=1)
+    #v⁻ + (v_p) × s
+    particles.v += np.cross(v_p, s)
+    particles.v += np.concatenate((v_p[:,1:2] * s[:,2:] - v_p[:,2:] * s[:,1:2],
+                                        v_p[:,2:] * s[:,:1] - v_p[:,:1] * s[:,2:] ,
+                                        v_p[:,:1] * s[:,1:2] - particles.v[:,1:2] * s[:,:1]), axis=1)
 
     # v_n+1 = previous + 𝜖
     particles.v += particles.qm * E * dt / 2
@@ -102,7 +112,7 @@ def boris_pusher_2D(grid: Grid2D, particles: Particles, dt):
     particles.v += particles.qm * E * dt / 2
 
     beta = particles.qm * B * dt / 2
-    beta_sq = beta * beta
+    beta_sq = np.sum(beta * beta, axis=1, keepdims=True)
     s = (2 * beta) / (1 + beta_sq)
     # Calculate v⁻ + (v⁻ + (v⁻ × β)) × s
     # v_p = v⁻ + (v⁻ × β)

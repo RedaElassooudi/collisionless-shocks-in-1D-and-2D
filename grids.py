@@ -74,7 +74,9 @@ class Grid1D3V:
         """
         dummy = electrons.x / self.dx
         electrons.idx = dummy.astype(int)
+        electrons.idx_staggered = (dummy - self.dx / 2).astype(int)
         electrons.cic_weights = dummy - electrons.idx
+        electrons.cic_weights_staggered = dummy - electrons.idx_staggered
         self.n_e.fill(0)
         np.add.at(self.n_e, electrons.idx, 1 - electrons.cic_weights)
         # TODO: We're assuming periodic BC here, take into account params.bc!
@@ -82,7 +84,9 @@ class Grid1D3V:
 
         dummy = ions.x / self.dx
         ions.idx = dummy.astype(int)
+        ions.idx_staggered = (dummy - self.dx / 2).astype(int)
         ions.cic_weights = dummy - ions.idx
+        ions.cic_weights_staggered = dummy - ions.idx_staggered
         self.n_i.fill(0)
         np.add.at(self.n_i, ions.idx, 1 - ions.cic_weights)
         np.add.at(self.n_i, (ions.idx + 1) % self.n_cells, ions.cic_weights)
@@ -102,7 +106,7 @@ class Grid2D:
         self.dx = dx
         self.x = np.arange(0, x_max, dx)
         self.y = np.arange(0, x_max, dx)
-        self.n_cells = self.x.size
+        self.n_cells = self.x.size+1
         # The fields we consider are Ex, Ey and Bz
         # External fields:
         self.E_0 = np.zeros((self.n_cells, self.n_cells, 2))

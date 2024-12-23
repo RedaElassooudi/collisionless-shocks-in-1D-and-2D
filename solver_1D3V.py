@@ -1,7 +1,6 @@
 import time
 import numpy as np
-from dateutil.parser import isoparse
-from dateutil.relativedelta import relativedelta
+import datetime
 
 import boundary_conditions
 from grids import Grid1D3V
@@ -12,7 +11,6 @@ from particles import Particles
 from physical_constants import *
 from results import ResultsND
 from time_constraint import calculate_dt_max
-
 
 
 def simulate(electrons: Particles, ions: Particles, params: Parameters):
@@ -129,9 +127,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
 
     print(f"{step:9}{t:12.4e}{dt:12.4e}{time.time() - t_start:21.3e}{TE:14.4e}")
     print("DONE!")
-
-    date = isoparse('1970-01-01T00:00:00.00') + relativedelta(seconds = t_start)
-    date_str = str(date)[0:10] + 'T' +  str(date)[11:13] + 'h' + str(date)[14:16]  + '_' + str(date)[17:19]
-    results.write(f"Results/{date_str}")
-    print(f"Results saved in Results/{date_str}/")
+    string_time = datetime.datetime.fromtimestamp(t_start).strftime("%Y-%m-%dT%Hh%Mm%Ss")
+    results.write(f"Results/{string_time}")
+    print(f"Results saved in Results/{string_time}/")
     return results

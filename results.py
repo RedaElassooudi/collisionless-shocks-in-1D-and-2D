@@ -126,6 +126,16 @@ class Results1D(Results):
         super().save_fields(grid)
         self.phi.append(grid.phi.copy())
 
+    def write(self, dirname):
+        super().write(dirname)
+
+        names_dict = {"phi": self.phi}
+
+        for dataname, data in names_dict.items():
+            file = os.path.join(dirname, f"{dataname}.pkl")
+            with open(file, "wb") as f:
+                pickle.dump(data, f)
+
 
 class ResultsND(Results):
     def __init__(self):
@@ -138,3 +148,13 @@ class ResultsND(Results):
         super().save_fields(grid)
         self.J.append(grid.J.copy())
         self.B.append(grid.B.copy())
+
+    def write(self, dirname):
+        super().write(dirname)
+
+        names_dict = {"J": self.J, "B": self.B}
+
+        for dataname, data in names_dict.items():
+            file = os.path.join(dirname, f"{dataname}.pkl")
+            with open(file, "wb") as f:
+                pickle.dump(data, f)

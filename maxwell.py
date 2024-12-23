@@ -5,8 +5,6 @@
 #   - https://en.wikipedia.org/wiki/Successive_over-relaxation
 import numpy as np
 
-# from numba import jit
-
 from grids import Grid1D, Grid1D3V
 from parameters import BoundaryCondition, Parameters
 from particles import Particles
@@ -90,24 +88,6 @@ def solve_poisson_sor(u, f, dx, bound_cond, max_iter=100000, tol=1e-4, omega=1.5
             if max_diff < tol:
                 print("SOR Converged before maximum iterations!! I AM HAPPY!!")
                 break
-
-
-# TODO
-# @jit
-def thomas_solver(a, b, c, d):
-    """
-    Can Thomas' algorithm be used to solve our 1D case of Poisson's equation?
-    code source: https://stackoverflow.com/questions/8733015/
-    Solve Ax = d, where A = tri(a, b, c), i.e. A is tridiagonal with a on the subdiagonal,
-    b on the diagonal and c on the upper diagonal
-
-    In our case, a = 1, b = -2, c = 1 and d = -rho/eps * dx^2
-
-    Boundary conditions will require special care!!
-    To keep tridiagonal structure, maybe use phi(x, t_n-1) for the values which would
-    break the structure?
-    """
-    raise NotImplementedError()
 
 
 def calc_curr_dens(grid: Grid1D3V, electrons: Particles, ions: Particles):

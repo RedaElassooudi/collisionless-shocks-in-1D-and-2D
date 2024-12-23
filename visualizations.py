@@ -15,11 +15,11 @@ def animate_phase_space(x_e, v_e, x_max):
 
     def update(frame):
         scatter.set_offsets(np.c_[x_e[frame], v_e[frame]])
-        ax.set_title(f"Electron Phase Space at Time Step {frame * 10}")
+        ax.set_title(f"Electron Phase Space at Time Step {frame * 50}")
         return (scatter,)
 
-    ani = FuncAnimation(fig, update, frames=len(x_e), interval=100)
-    ani.save("phase_space_animation.gif", writer="ffmpeg", fps=30)
+    ani = FuncAnimation(fig, update, frames=len(x_e), interval=500)
+    ani.save("phase_space_animation.gif", writer="ffmpeg")
 
 
 def field_1D(time_steps, x, F, name, t):

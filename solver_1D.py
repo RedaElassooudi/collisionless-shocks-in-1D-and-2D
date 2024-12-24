@@ -52,7 +52,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
         t += dt
 
         # Solve the Poisson equation on the grid and set the values for rho, phi and E
-        maxwell.poisson_solver_1D(grid, electrons, ions, params)
+        maxwell.poisson_solver(grid, electrons, ions, params)
 
         # Calculate velocities v^(n+1/2) using Newton's equation
         newton.lorenz_force_1D(grid, electrons, dt)

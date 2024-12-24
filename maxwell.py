@@ -5,8 +5,6 @@
 #   - https://en.wikipedia.org/wiki/Successive_over-relaxation
 import numpy as np
 
-# from numba import jit
-
 from grids import Grid1D, Grid1D3V, Grid2D
 from parameters import BoundaryCondition, Parameters
 from particles import Particles
@@ -92,24 +90,6 @@ def solve_poisson_sor(u, f, dx, bound_cond, max_iter=100000, tol=1e-4, omega=1.5
                 break
 
 
-# TODO
-# @jit
-def thomas_solver(a, b, c, d):
-    """
-    Can Thomas' algorithm be used to solve our 1D case of Poisson's equation?
-    code source: https://stackoverflow.com/questions/8733015/
-    Solve Ax = d, where A = tri(a, b, c), i.e. A is tridiagonal with a on the subdiagonal,
-    b on the diagonal and c on the upper diagonal
-
-    In our case, a = 1, b = -2, c = 1 and d = -rho/eps * dx^2
-
-    Boundary conditions will require special care!!
-    To keep tridiagonal structure, maybe use phi(x, t_n-1) for the values which would
-    break the structure?
-    """
-    raise NotImplementedError()
-
-
 def calc_curr_dens_1D3V(grid: Grid1D3V, electrons: Particles, ions: Particles):
     # Current density via CIC for all three velocity components
     grid.J.fill(0)
@@ -157,7 +137,7 @@ def calc_fields_1D3V(grid: Grid1D3V, dt, bc):
         grid.E[0, 2] = 3 * grid.E[1, 2] - 3 * grid.E[2, 2] + grid.E[3, 2]
         grid.B[-1, 1] = 3 * grid.B[-2, 1] - 3 * grid.B[-3, 1] + grid.B[-4, 1]
         grid.B[-1, 2] = 3 * grid.B[-2, 2] - 3 * grid.B[-3, 2] + grid.B[-4, 2]
-        
+
 
 def calc_E_1D3V(grid: Grid1D3V, dt, bc):
     """
@@ -219,7 +199,7 @@ def euler_solver_1D3V(grid: Grid1D3V, dt: float, bc: BoundaryCondition):
         # Remove mean field, physically required for periodic boundary conditions as quasi neutrality must be maintained
         grid.rho -= np.mean(grid.rho)
         rho_k = np.fft.fft(grid.rho)
-        k = 2 * np.pi * np.fft.fftfreq(grid.n_cells) / grid.x_max # k = 2 * pi * n / L (n = -N/2, -N/2+1, ..., N/2-1)
+        k = 2 * np.pi * np.fft.fftfreq(grid.n_cells) / grid.x_max  # k = 2 * pi * n / L (n = -N/2, -N/2+1, ..., N/2-1)
 
         # Avoid dividing by k = zero
         E_k = np.zeros_like(rho_k)
@@ -228,21 +208,20 @@ def euler_solver_1D3V(grid: Grid1D3V, dt: float, bc: BoundaryCondition):
         grid.E[:, 0] = np.fft.ifft(E_k)
     elif bc is BoundaryCondition.Absorbing:
         # Solve using first order implicit discretization assuming E(x_0) = 0 (excluding any external fields)
-        grid.E[0,0] = 0
-        for i in range(1,grid.n_cells):
-            grid.E[i, 0] = grid[i-1, 0] + grid.dx / eps_0 * grid.rho[i]
+        grid.E[0, 0] = 0
+        for i in range(1, grid.n_cells):
+            grid.E[i, 0] = grid[i - 1, 0] + grid.dx / eps_0 * grid.rho[i]
         grid.E[:, 0] += grid.E_0[:, 0]
     elif bc is BoundaryCondition.Open:
         # Solve using first order implicit discretization
-        grid.E[0,0] = 0
+        grid.E[0, 0] = 0
         for i in range(1, grid.n_cells):
-            grid.E[i, 0] = grid[i-1, 0] + grid.dx / eps_0 * grid.rho[i]
+            grid.E[i, 0] = grid[i - 1, 0] + grid.dx / eps_0 * grid.rho[i]
         # To remove any effects by setting E(x_0) = 0 we redo the calcs for E in opposite direction using E(x_N) as our starting point
         # --> Not certain if this implementation is fully correct
-        for i in range(grid.n_cells-2, -1, -1):
-            grid.E[i, 0] = grid[i+1, 0] - grid.dx / eps_0 * grid.rho[i]
+        for i in range(grid.n_cells - 2, -1, -1):
+            grid.E[i, 0] = grid[i + 1, 0] - grid.dx / eps_0 * grid.rho[i]
         grid.E[:, 0] += grid.E_0[:, 0]
-
 
 
 # -----------------------------------------------------
@@ -301,27 +280,31 @@ def calc_curr_dens_2D(grid: Grid1D3V, electrons: Particles, ions: Particles):
     # Create array to get the correct index for adjacent points
     x_adj = np.zeros((electrons.N, 2), dtype=int)
     y_adj = np.zeros((electrons.N, 2), dtype=int)
-    x_adj[:,0] = 1
-    y_adj[:,1] = 1
-    np.add.at(grid.J, (electrons.idx[:,0], electrons.idx[:,1]), electrons.v * electrons.q * (1 - electrons.cic_weights[:,:1]) * (1 - electrons.cic_weights[:,1:]))
+    x_adj[:, 0] = 1
+    y_adj[:, 1] = 1
+    np.add.at(
+        grid.J,
+        (electrons.idx[:, 0], electrons.idx[:, 1]),
+        electrons.v * electrons.q * (1 - electrons.cic_weights[:, :1]) * (1 - electrons.cic_weights[:, 1:]),
+    )
     coord = (electrons.idx + x_adj) % grid.n_cells
-    np.add.at(grid.J, (coord[:,0], coord[:,1]), electrons.v * electrons.q * electrons.cic_weights[:,:1] * (1 - electrons.cic_weights[:,1:]))
+    np.add.at(grid.J, (coord[:, 0], coord[:, 1]), electrons.v * electrons.q * electrons.cic_weights[:, :1] * (1 - electrons.cic_weights[:, 1:]))
     coord = (electrons.idx + y_adj) % grid.n_cells
-    np.add.at(grid.J, (coord[:,0], coord[:,1]), electrons.v * electrons.q * electrons.cic_weights[:,1:] * (1 - electrons.cic_weights[:,:1]))
+    np.add.at(grid.J, (coord[:, 0], coord[:, 1]), electrons.v * electrons.q * electrons.cic_weights[:, 1:] * (1 - electrons.cic_weights[:, :1]))
     coord = (electrons.idx + x_adj + y_adj) % grid.n_cells
-    np.add.at(grid.J, (coord[:,0], coord[:,1]), electrons.v * electrons.q * electrons.cic_weights[:,:1] * electrons.cic_weights[:,1:])
+    np.add.at(grid.J, (coord[:, 0], coord[:, 1]), electrons.v * electrons.q * electrons.cic_weights[:, :1] * electrons.cic_weights[:, 1:])
 
     x_adj = np.zeros((ions.N, 2), dtype=int)
     y_adj = np.zeros((ions.N, 2), dtype=int)
-    x_adj[:,0] = 1
-    y_adj[:,1] = 1
-    np.add.at(grid.J, (ions.idx[:,0], ions.idx[:,1]), ions.v * ions.q * (1 - ions.cic_weights[:,:1]) * (1 - ions.cic_weights[:,1:]))
+    x_adj[:, 0] = 1
+    y_adj[:, 1] = 1
+    np.add.at(grid.J, (ions.idx[:, 0], ions.idx[:, 1]), ions.v * ions.q * (1 - ions.cic_weights[:, :1]) * (1 - ions.cic_weights[:, 1:]))
     coord = (ions.idx + x_adj) % grid.n_cells
-    np.add.at(grid.J, (coord[:,0], coord[:,1]), ions.v * ions.q * ions.cic_weights[:,:1] * (1 - ions.cic_weights[:,1:]))
+    np.add.at(grid.J, (coord[:, 0], coord[:, 1]), ions.v * ions.q * ions.cic_weights[:, :1] * (1 - ions.cic_weights[:, 1:]))
     coord = (ions.idx + y_adj) % grid.n_cells
-    np.add.at(grid.J, (coord[:,0], coord[:,1]), ions.v * ions.q * ions.cic_weights[:,1:] * (1 - ions.cic_weights[:,:1]))
+    np.add.at(grid.J, (coord[:, 0], coord[:, 1]), ions.v * ions.q * ions.cic_weights[:, 1:] * (1 - ions.cic_weights[:, :1]))
     coord = (ions.idx + x_adj + y_adj) % grid.n_cells
-    np.add.at(grid.J, (coord[:,0], coord[:,1]), ions.v * ions.q * ions.cic_weights[:,:1] * ions.cic_weights[:,1:])
+    np.add.at(grid.J, (coord[:, 0], coord[:, 1]), ions.v * ions.q * ions.cic_weights[:, :1] * ions.cic_weights[:, 1:])
 
 
 def calc_E_2D(grid: Grid2D, dt, bc):
@@ -357,15 +340,26 @@ def calc_B_2D(grid: Grid2D, dt, bc):
     if bc is BoundaryCondition.Periodic:
         # calculate the fields at the full timestep
         # np.roll(Ez, -1) = [Ez(x1), Ez(x2), ..., Ez(xN), Ez(x0)]
-        grid.B[:, :, 0] += dt * c * c * (-(np.roll(grid.E[:, :, 1], -1, axis=1) - grid.E[:, :, 1]) / grid.dx + (np.roll(grid.E[:, :, 0], -1, axis=0) - grid.E[:, :, 0]) / grid.dx)
+        grid.B[:, :, 0] += (
+            dt
+            * c
+            * c
+            * (
+                -(np.roll(grid.E[:, :, 1], -1, axis=1) - grid.E[:, :, 1]) / grid.dx
+                + (np.roll(grid.E[:, :, 0], -1, axis=0) - grid.E[:, :, 0]) / grid.dx
+            )
+        )
     else:
         # calculate the fields at the full timestep
-        grid.B[:-1, :-1, 0] += dt * c * c * (-(grid.E[1:, 1:, 1] - grid.E[:-1, :-1, 1]) / grid.dx + (grid.E[1:, 1:, 0] - grid.E[:-1, :-1, 0]) / grid.dx)
+        grid.B[:-1, :-1, 0] += (
+            dt * c * c * (-(grid.E[1:, 1:, 1] - grid.E[:-1, :-1, 1]) / grid.dx + (grid.E[1:, 1:, 0] - grid.E[:-1, :-1, 0]) / grid.dx)
+        )
 
         # calculate the boundary values using interpolation
         grid.B[-1, :-1, 0] = 3 * grid.B[-2, :-1, 0] - 3 * grid.B[-3, :-1, 0] + grid.B[-4, :-1, 0]
         grid.B[:-1, -1, 0] = 3 * grid.B[:-1, -2, 0] - 3 * grid.B[:-1, -3, 0] + grid.B[:-1, -4, 0]
-        grid.B[-1, -1, 0] = 3 * grid.B[-1, -2, 0] - 3 * grid.B[-1, -3, 0] + grid.B[-1, -4, 0] # last value is an interpolation of an interpolation
+        grid.B[-1, -1, 0] = 3 * grid.B[-1, -2, 0] - 3 * grid.B[-1, -3, 0] + grid.B[-1, -4, 0]  # last value is an interpolation of an interpolation
+
 
 """
 if __name__ == "__main__":

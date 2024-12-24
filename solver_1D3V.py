@@ -1,5 +1,6 @@
 import time
 import numpy as np
+import datetime
 
 import boundary_conditions
 from grids import Grid1D3V
@@ -84,7 +85,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
 
         # Calculate densities n_e^(n+1), n_i^(n+1) and rho^(n+1)
         grid.set_densities(electrons, ions)
-        
+
         # Calculate J⁺ = q * v^(n+1/2) * n^(n+1)
         maxwell.calc_curr_dens_1D3V(grid, electrons, ions)
 
@@ -100,7 +101,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
 
         # Calculate the kinetic energy at the staggered timestep before the data is lost
         # To avoid making the calculation every timestep check if it is the step before the save step
-        if (step+1) % 50 == 0:
+        if (step + 1) % 50 == 0:
             KE_prev = electrons.kinetic_energy() + ions.kinetic_energy()
 
         # Save results every 50 iterations
@@ -117,6 +118,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
 
     print(f"{step:9}{t:12.4e}{dt:12.4e}{time.time() - t_start:21.3e}{TE:14.4e}")
     print("DONE!")
-    results.write(f"Results/{int(t_start)}")
-    print(f"Results saved in Results/{int(t_start)}/")
+    string_time = datetime.datetime.fromtimestamp(t_start).strftime("%Y-%m-%dT%Hh%Mm%Ss")
+    results.write(f"Results/{string_time}")
+    print(f"Results saved in Results/{string_time}/")
     return results

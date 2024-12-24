@@ -74,7 +74,7 @@ class Grid1D3V:
         """
         dummy = electrons.x / self.dx
         electrons.idx = dummy.astype(int)
-        electrons.idx_staggered = (dummy - self.dx / 2).astype(int)
+        electrons.idx_staggered = (dummy - 0.5).astype(int)
         electrons.cic_weights = dummy - electrons.idx
         electrons.cic_weights_staggered = dummy - electrons.idx_staggered
         self.n_e.fill(0)
@@ -84,7 +84,7 @@ class Grid1D3V:
 
         dummy = ions.x / self.dx
         ions.idx = dummy.astype(int)
-        ions.idx_staggered = (dummy - self.dx / 2).astype(int)
+        ions.idx_staggered = (dummy - 0.5).astype(int)
         ions.cic_weights = dummy - ions.idx
         ions.cic_weights_staggered = dummy - ions.idx_staggered
         self.n_i.fill(0)

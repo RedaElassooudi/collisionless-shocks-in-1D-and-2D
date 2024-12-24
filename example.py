@@ -12,9 +12,11 @@ def main():
     np.random.seed(42)
 
     num_particles = 20000  # Total number of particles (ions + electrons)
-    num_cells = 200  # Number of spatial grid cells
+    num_cells = 100  # Number of spatial grid cells
     x_max = 1.0  # Maximum position value
     dx = x_max / num_cells  # Spatial step size
+    dimx = 1
+    dimv = 3
 
     t_max = 1.0e1
     max_iter = 20000
@@ -24,15 +26,20 @@ def main():
     bulk_velocity_e = 5e-7  # Bulk velocity for electrons (towards left)
     bulk_velocity_i = 5e-7  # Bulk velocity for ions (towards left)
 
-    # el, io = initialize_particles(num_particles, x_max, bulk_velocity_e, bulk_velocity_i, 3)
+    """
+    el, io = initialize_particles(num_particles, x_max, bulk_velocity_e, bulk_velocity_i, dimx, dimv)
+    """
+    # Fabio code: instability occurs at w_pe * t = 25
+
+    params = Parameters(x_max, dx, t_max, max_iter, BoundaryCondition.Periodic, dimX=dimx, dimV=dimv)
 
     # Fabio code: instability occurs at w_pe * t = 25
-    V0 = 0.9  # Stream velocity
-    VT = 0.00000001  # Thermal speed
+    v_bulk = 0.9  # Stream velocity
+    v_th = 0.00000001  # Thermal speed
     pert_amp = 0.0001  # Perturbation amplitude
     mode = 3  # wave mode to activate
-    el, io = two_stream(num_particles, x_max, VT, V0, num_cells, pert_amp, mode)
-    params = Parameters(x_max, dx, t_max, max_iter, BoundaryCondition.Periodic, damping_width)
+    el, io = two_stream(num_particles, x_max, v_th, v_bulk, num_cells, pert_amp, mode)
+
     res = solver_1D3V.simulate(el, io, params)
 
     # Define time steps to plot (start, middle, end)

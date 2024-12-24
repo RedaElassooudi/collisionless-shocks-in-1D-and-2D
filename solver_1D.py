@@ -25,7 +25,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
     results = Results1D()
 
     max_v = max(np.max(np.abs(electrons.v)), np.max(np.abs(ions.v)))
-    dt = calculate_dt_max(params.dx, max_v, electrons.qm, safety_factor=20)
+    dt = calculate_dt_max(params.dx, max_v, electrons.qm, electrons.dimX, safety_factor=20)
     newton.initialize_velocities_half_step_1D(grid, electrons, ions, params, dt)
 
     # Save data at time = 0
@@ -48,7 +48,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
         step += 1
 
         max_v = max(np.max(np.abs(electrons.v)), np.max(np.abs(ions.v)))
-        dt = calculate_dt_max(params.dx, max_v, electrons.qm, safety_factor=20)
+        dt = calculate_dt_max(params.dx, max_v, electrons.qm, electrons.dimX, safety_factor=20)
         t += dt
 
         # Solve the Poisson equation on the grid and set the values for rho, phi and E

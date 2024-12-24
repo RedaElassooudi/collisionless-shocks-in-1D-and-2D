@@ -5,6 +5,8 @@
 #   - https://en.wikipedia.org/wiki/Successive_over-relaxation
 import numpy as np
 
+from numba import jit
+
 from grids import Grid1D, Grid1D3V, Grid2D
 from parameters import BoundaryCondition, Parameters
 from particles import Particles
@@ -90,13 +92,34 @@ def solve_poisson_sor(u, f, dx, bound_cond, max_iter=100000, tol=1e-4, omega=1.5
                 break
 
 
-def calc_curr_dens_1D3V(grid: Grid1D3V, electrons: Particles, ions: Particles):
-    # Current density via CIC for all three velocity components
-    grid.J.fill(0)
-    np.add.at(grid.J, electrons.idx.flatten(), electrons.v * electrons.q * (1 - electrons.cic_weights))
-    np.add.at(grid.J, (electrons.idx.flatten() + 1) % grid.n_cells, electrons.v * electrons.q * electrons.cic_weights)
-    np.add.at(grid.J, ions.idx.flatten(), ions.v * ions.q * (1 - ions.cic_weights))
-    np.add.at(grid.J, (ions.idx.flatten() + 1) % grid.n_cells, ions.v * ions.q * ions.cic_weights)
+@jit
+def calc_curr_dens_1D3V_numba(grid_J, n_cells, idx, cic_weights, v, q):
+    n_particles = len(idx)
+
+    for i in range(n_particles):
+        grid_J[idx[i]] += q * v[i] * (1 - cic_weights[i, 0])
+        grid_J[(idx[i] + 1) % n_cells] += q * v[i] * cic_weights[i, 0]
+
+
+@jit
+def set_zero(x):
+    for i in range(x.shape[0]):
+        for j in range(x.shape[1]):
+            x[i, j] = 0
+
+
+def calc_curr_dens_1D3V(grid, electrons, ions):
+    """
+    Compute the current density for a 1D3V grid using CIC for all three velocity components.
+
+    Parameters:
+        grid (Grid1D3V): The simulation grid.
+        electrons (Particles): The electron particles.
+        ions (Particles): The ion particles.
+    """
+    set_zero(grid.J)
+    calc_curr_dens_1D3V_numba(grid.J, grid.n_cells, electrons.idx, electrons.cic_weights, electrons.v, electrons.q)
+    calc_curr_dens_1D3V_numba(grid.J, grid.n_cells, ions.idx, ions.cic_weights, ions.v, ions.q)
 
 
 def calc_fields_1D3V(grid: Grid1D3V, dt, bc):

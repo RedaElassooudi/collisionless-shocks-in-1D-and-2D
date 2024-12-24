@@ -65,8 +65,10 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
         # depending on the boundary condition, the positions have to be updated before or after
         # the boundary conditions have been applied
         if params.bc is BoundaryCondition.Open:
-            newton.advance_positions(electrons, dt)
-            newton.advance_positions(ions, dt)
+            # newton.advance_positions(electrons, dt)
+            # newton.advance_positions(ions, dt)
+            newton.advance_jit(electrons.x, electrons.v, dt)
+            newton.advance_jit(ions.x, ions.v, dt)
             boundary_conditions.open_bc(electrons, ions, params.x_max, params.dx)
 
         elif params.bc is BoundaryCondition.Periodic:

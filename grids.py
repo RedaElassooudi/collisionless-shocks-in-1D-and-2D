@@ -1,4 +1,5 @@
 import numpy as np
+from numba import jit
 
 from particles import Particles
 
@@ -96,6 +97,37 @@ class Grid1D3V:
         # --> is only physically correct for quasi neutrality? so might not hold for open boundary at t!= 0.
         # Thus we might need to reconsider this for the 1D1V case as wel.
         # self.rho -= np.mean(self.rho)
+
+    def set_densities(self, electrons: Particles, ions: Particles):
+        electrons.idx, electrons.idx_staggered, electrons.cic_weights, electrons.cic_weights_staggered = set_densities_numba(
+            electrons.x, self.n_e, self.dx, self.n_cells
+        )
+        ions.idx, ions.idx_staggered, ions.cic_weights, ions.cic_weights_staggered = set_densities_numba(ions.x, self.n_i, self.dx, self.n_cells)
+        self.rho = electrons.q * self.n_e + ions.q * self.n_i
+
+
+@jit
+def set_densities_numba(x, n, dx, n_cells):
+    n_particles = x.size
+    idx = np.empty((x.size, 1), np.int32)
+    idx_staggered = np.empty((x.size, 1), np.int32)
+    cic_weights = np.empty((x.size, 1), x.dtype)
+    cic_weights_staggered = np.empty((x.size, 1), x.dtype)
+    for i in range(x.size):
+        dummy = x[i, 0] / dx
+        idx[i, 0] = np.int32(dummy)
+        idx_staggered[i, 0] = np.int32(dummy - 0.5)
+        cic_weights[i, 0] = dummy - idx[i, 0]
+        cic_weights_staggered[i, 0] = dummy - 0.5 - idx_staggered[i, 0]
+
+    for i in range(n_cells):
+        n[i] = 0
+
+    for i in range(n_particles):
+        n[idx[i]] += 1 - cic_weights[i, 0]
+        n[(idx[i] + 1) % n_cells] += cic_weights[i, 0]
+
+    return idx, idx_staggered, cic_weights, cic_weights_staggered
 
 
 # 2 spatial indices, 2/3 components

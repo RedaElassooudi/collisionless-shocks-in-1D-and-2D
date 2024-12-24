@@ -1,5 +1,7 @@
 import numpy as np
 
+from numba import jit
+
 from grids import Grid1D, Grid1D3V, Grid2D
 import maxwell
 from parameters import Parameters
@@ -12,6 +14,12 @@ def advance_positions(particles: Particles, dt):
     Works for 1D, 1D3V, 2D, 3D
     """
     particles.x += particles.v[:, 0 : particles.dimX] * dt
+
+
+@jit
+def advance_jit(x, v, dt):
+    for i in range(x.shape[0]):
+        x[i] += v[i, 0] * dt
 
 
 def initialize_velocities_half_step_1D(grid: Grid1D, electrons: Particles, ions: Particles, params: Parameters, dt: float):

@@ -41,14 +41,8 @@ def initialize_velocities_half_step_1D3V(grid: Grid1D, electrons: Particles, ion
 def boris_pusher_1D3V(grid: Grid1D3V, particles: Particles, dt):
     # extra source: https://www.particleincell.com/2011/vxb-rotation/
     # Get field at particle positions
-    E = (
-        grid.E[particles.idx.flatten()] * (1 - particles.cic_weights)
-        + grid.E[(particles.idx.flatten() + 1) % grid.n_cells] * particles.cic_weights
-    )
-    B = (
-        grid.B[particles.idx.flatten()] * (1 - particles.cic_weights)
-        + grid.B[(particles.idx.flatten() + 1) % grid.n_cells] * particles.cic_weights
-    )
+    E = grid.E[particles.idx.flatten()] * (1 - particles.cic_weights) + grid.E[(particles.idx.flatten() + 1) % grid.n_cells] * particles.cic_weights
+    B = grid.B[particles.idx.flatten()] * (1 - particles.cic_weights) + grid.B[(particles.idx.flatten() + 1) % grid.n_cells] * particles.cic_weights
     # Calculate v⁻ = v_n + 𝜖
     particles.v += particles.qm * E * dt / 2
 

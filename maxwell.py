@@ -161,7 +161,7 @@ def euler_solver_1D3V(grid: Grid1D3V, dt: float, bc: BoundaryCondition):
         # Remove mean field, physically required for periodic boundary conditions as quasi neutrality must be maintained
         grid.rho -= np.mean(grid.rho)
         rho_k = np.fft.fft(grid.rho)
-        k = 2 * np.pi * np.fft.fftfreq(grid.n_cells) / grid.x_max # k = 2 * pi * n / L (n = -N/2, -N/2+1, ..., N/2-1)
+        k = 2 * np.pi * np.fft.fftfreq(grid.n_cells) / grid.x_max  # k = 2 * pi * n / L (n = -N/2, -N/2+1, ..., N/2-1)
 
         # Avoid dividing by k = zero
         E_k = np.zeros_like(rho_k)
@@ -170,21 +170,20 @@ def euler_solver_1D3V(grid: Grid1D3V, dt: float, bc: BoundaryCondition):
         grid.E[:, 0] = np.fft.ifft(E_k)
     elif bc is BoundaryCondition.Absorbing:
         # Solve using first order implicit discretization assuming E(x_0) = 0 (excluding any external fields)
-        grid.E[0,0] = 0
-        for i in range(1,grid.n_cells):
-            grid.E[i, 0] = grid[i-1, 0] + grid.dx / eps_0 * grid.rho[i]
+        grid.E[0, 0] = 0
+        for i in range(1, grid.n_cells):
+            grid.E[i, 0] = grid[i - 1, 0] + grid.dx / eps_0 * grid.rho[i]
         grid.E[:, 0] += grid.E_0[:, 0]
     elif bc is BoundaryCondition.Open:
         # Solve using first order implicit discretization
-        grid.E[0,0] = 0
+        grid.E[0, 0] = 0
         for i in range(1, grid.n_cells):
-            grid.E[i, 0] = grid[i-1, 0] + grid.dx / eps_0 * grid.rho[i]
+            grid.E[i, 0] = grid[i - 1, 0] + grid.dx / eps_0 * grid.rho[i]
         # To remove any effects by setting E(x_0) = 0 we redo the calcs for E in opposite direction using E(x_N) as our starting point
         # --> Not certain if this implementation is fully correct
-        for i in range(grid.n_cells-2, -1, -1):
-            grid.E[i, 0] = grid[i+1, 0] - grid.dx / eps_0 * grid.rho[i]
+        for i in range(grid.n_cells - 2, -1, -1):
+            grid.E[i, 0] = grid[i + 1, 0] - grid.dx / eps_0 * grid.rho[i]
         grid.E[:, 0] += grid.E_0[:, 0]
-
 
 
 # -----------------------------------------------------

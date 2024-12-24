@@ -187,5 +187,4 @@ np.savetxt("field_ene.txt", (t, histPotE))
 # print ('Time elapsed: ', time.clock() - start_time)
 
 # Comment this line if you want the figure to automatically close at the end of the simulation
-plt.show()
-raw_input("Press enter...")
+input("Press enter...")

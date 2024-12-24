@@ -15,6 +15,8 @@ class Parameters:
     t_max: float
     max_iter: int
     bc: BoundaryCondition
+    dimX: int
+    dimV: int
     damping_width: float = 0
     SOR_max_iter: int = 1000
     SOR_tol: float = 1.0e-6

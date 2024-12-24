@@ -9,7 +9,7 @@ class Grid1D:
         self.x_max = x_max
         self.dx = dx
         self.x = np.arange(0, x_max, dx)
-        self.n_cells = self.x.size+1
+        self.n_cells = self.x.size + 1
         # Cell averaged-quantities
         # TODO: set initial conditions (same for 1D3V)
         self.E_0 = np.zeros(self.n_cells)
@@ -51,7 +51,7 @@ class Grid1D3V:
         self.x_max = x_max
         self.dx = dx
         self.x = np.arange(0, x_max, dx)
-        self.n_cells = self.x.size
+        self.n_cells = self.x.size + 1
         # External fields:
         self.E_0 = np.zeros((self.n_cells, 3))
         self.B_0 = np.zeros((self.n_cells, 3))
@@ -92,10 +92,10 @@ class Grid1D3V:
         np.add.at(self.n_i, (ions.idx + 1) % self.n_cells, ions.cic_weights)
 
         self.rho = electrons.q * self.n_e + ions.q * self.n_i
-        # Remove mean charge, I'm not sure about the physical validity of doing this? 
+        # Remove mean charge, I'm not sure about the physical validity of doing this?
         # --> is only physically correct for quasi neutrality? so might not hold for open boundary at t!= 0.
         # Thus we might need to reconsider this for the 1D1V case as wel.
-        #self.rho -= np.mean(self.rho)
+        # self.rho -= np.mean(self.rho)
 
 
 # 2 spatial indices, 2/3 components
@@ -106,7 +106,7 @@ class Grid2D:
         self.dx = dx
         self.x = np.arange(0, x_max, dx)
         self.y = np.arange(0, x_max, dx)
-        self.n_cells = self.x.size+1
+        self.n_cells = self.x.size + 1
         # The fields we consider are Ex, Ey and Bz
         # External fields:
         self.E_0 = np.zeros((self.n_cells, self.n_cells, 2))
@@ -129,7 +129,7 @@ class Grid2D:
         """
         Set the electron density, ion density and charge density on the grid
         """
-        dummy = electrons.x /  self.dx # Subtract 1/2 * dx making sure that the two chosen cells are the closest after using astype
+        dummy = electrons.x / self.dx  # Subtract 1/2 * dx making sure that the two chosen cells are the closest after using astype
         electrons.idx = dummy.astype(int)
         electrons.cic_weights = dummy - electrons.idx
         self.n_e.fill(0)
@@ -137,16 +137,16 @@ class Grid2D:
         # Create array to get the correct index for adjacent points
         x_adj = np.zeros((electrons.N, 2), dtype=int)
         y_adj = np.zeros((electrons.N, 2), dtype=int)
-        x_adj[:,0] = 1
-        y_adj[:,1] = 1
-        np.add.at(self.n_e, (electrons.idx[:,0], electrons.idx[:,1]), (1 - electrons.cic_weights[:,0]) * (1 - electrons.cic_weights[:,1]))
+        x_adj[:, 0] = 1
+        y_adj[:, 1] = 1
+        np.add.at(self.n_e, (electrons.idx[:, 0], electrons.idx[:, 1]), (1 - electrons.cic_weights[:, 0]) * (1 - electrons.cic_weights[:, 1]))
         coords = (electrons.idx + x_adj) % self.n_cells
-        np.add.at(self.n_e, (coords[:,0], coords[:,1]), electrons.cic_weights[:,0] * (1 - electrons.cic_weights[:,1]))
+        np.add.at(self.n_e, (coords[:, 0], coords[:, 1]), electrons.cic_weights[:, 0] * (1 - electrons.cic_weights[:, 1]))
         coords = (electrons.idx + y_adj) % self.n_cells
-        np.add.at(self.n_e, (coords[:,0], coords[:,1]), electrons.cic_weights[:,1] * (1 - electrons.cic_weights[:,0]))
+        np.add.at(self.n_e, (coords[:, 0], coords[:, 1]), electrons.cic_weights[:, 1] * (1 - electrons.cic_weights[:, 0]))
         coords = (electrons.idx + x_adj + y_adj) % self.n_cells
-        np.add.at(self.n_e, (coords[:,0], coords[:,1]), electrons.cic_weights[:,0] * electrons.cic_weights[:,1])
-        
+        np.add.at(self.n_e, (coords[:, 0], coords[:, 1]), electrons.cic_weights[:, 0] * electrons.cic_weights[:, 1])
+
         dummy = ions.x / self.dx
         ions.idx = dummy.astype(int)
         ions.cic_weights = dummy - ions.idx
@@ -155,18 +155,18 @@ class Grid2D:
         # Create array to get the correct index for adjacent points
         x_adj = np.zeros((ions.N, 2), dtype=int)
         y_adj = np.zeros((ions.N, 2), dtype=int)
-        x_adj[:,0] = 1
-        y_adj[:,1] = 1
-        np.add.at(self.n_e, (ions.idx[:,0], ions.idx[:,1]), (1 - ions.cic_weights[:,0]) * (1 - ions.cic_weights[:,1]))
+        x_adj[:, 0] = 1
+        y_adj[:, 1] = 1
+        np.add.at(self.n_e, (ions.idx[:, 0], ions.idx[:, 1]), (1 - ions.cic_weights[:, 0]) * (1 - ions.cic_weights[:, 1]))
         coords = (ions.idx + x_adj) % self.n_cells
-        np.add.at(self.n_e, (coords[:,0], coords[:,1]), ions.cic_weights[:,0] * (1 - ions.cic_weights[:,1]))
+        np.add.at(self.n_e, (coords[:, 0], coords[:, 1]), ions.cic_weights[:, 0] * (1 - ions.cic_weights[:, 1]))
         coords = (ions.idx + y_adj) % self.n_cells
-        np.add.at(self.n_e, (coords[:,0], coords[:,1]), ions.cic_weights[:,1] * (1 - ions.cic_weights[:,0]))
+        np.add.at(self.n_e, (coords[:, 0], coords[:, 1]), ions.cic_weights[:, 1] * (1 - ions.cic_weights[:, 0]))
         coords = (ions.idx + x_adj + y_adj) % self.n_cells
-        np.add.at(self.n_e, (coords[:,0], coords[:,1]), ions.cic_weights[:,0] * ions.cic_weights[:,1])
-        
+        np.add.at(self.n_e, (coords[:, 0], coords[:, 1]), ions.cic_weights[:, 0] * ions.cic_weights[:, 1])
+
         self.rho = electrons.q * self.n_e + ions.q * self.n_i
-        # Remove mean charge, I'm not sure about the physical validity of doing this? 
+        # Remove mean charge, I'm not sure about the physical validity of doing this?
         # --> is only physically correct for quasi neutrality? so might not hold for open boundary at t!= 0.
         # Thus we might need to reconsider this for the 1D1V case as wel.
         self.rho -= np.mean(self.rho)

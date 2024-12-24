@@ -31,8 +31,8 @@ if __name__ == "__main__":
     V0 = 0.9  # Stream velocity
     VT = 0.00000001  # Thermal speed
     el, io = two_stream(num_particles, x_max, VT, V0)
-    
-    params = Parameters(x_max, dx, t_max, max_iter, BoundaryCondition.Periodic, damping_width, dimx, dimv)
+
+    params = Parameters(x_max, dx, t_max, max_iter, BoundaryCondition.Periodic, dimX=dimx, dimV=dimv)
     res = solver_1D3V.simulate(el, io, params)
 
     # Define time steps to plot (start, middle, end)

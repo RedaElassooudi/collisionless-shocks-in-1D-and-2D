@@ -14,9 +14,7 @@ def advance_positions(particles: Particles, dt):
     particles.x += particles.v[:, 0 : particles.dimX] * dt
 
 
-def initialize_velocities_half_step_1D(
-    grid: Grid1D, electrons: Particles, ions: Particles, params: Parameters, dt: float
-):
+def initialize_velocities_half_step_1D(grid: Grid1D, electrons: Particles, ions: Particles, params: Parameters, dt: float):
     """
     Function to properly initialize velocities for the leapfrog scheme at t-dt/2.
     """
@@ -29,10 +27,7 @@ def initialize_velocities_half_step_1D(
 
 def lorenz_force_1D(grid: Grid1D, particles: Particles, dt):
     # Get field at particle positions
-    E = (
-        grid.E[particles.idx] * (1 - particles.cic_weights)
-        + grid.E[(particles.idx + 1) % grid.n_cells] * particles.cic_weights
-    )
+    E = grid.E[particles.idx] * (1 - particles.cic_weights) + grid.E[(particles.idx + 1) % grid.n_cells] * particles.cic_weights
     # Update velocities using 1D Lorenz force formulation
     particles.v += particles.qm * E * dt
 
@@ -58,8 +53,8 @@ def boris_pusher_1D3V(grid: Grid1D3V, particles: Particles, dt):
     particles.v += particles.qm * E * dt / 2
 
     beta = particles.qm * B * dt / 2
-    # beta_sq = np.einsum("ij,ij->i", beta, beta)
-    beta_sq = np.sum(beta * beta, axis=1) # better performance
+    # einsum really is the fastest: https://stackoverflow.com/a/45006970/15836556
+    beta_sq = np.einsum("ij,ij->i", beta, beta)
     beta_sq = beta_sq[:, np.newaxis]
     s = (2 * beta) / (1 + beta_sq)
     # Calculate v⁻ + (v⁻ + (v⁻ × β)) × s

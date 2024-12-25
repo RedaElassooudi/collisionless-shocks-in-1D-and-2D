@@ -1,11 +1,15 @@
 import numpy as np
 
+import sys
+
+sys.path.append("./")
+sys.path.append("../")
 
 from initial_distributions import initialize_particles, two_stream
 from parameters import Parameters, BoundaryCondition
 from results import Results
 import solver_1D3V
-import visualizations as vis
+import visualizations.visualizations as vis
 
 
 def main():

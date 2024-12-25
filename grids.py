@@ -106,7 +106,7 @@ class Grid1D3V:
         self.rho = electrons.q * self.n_e + ions.q * self.n_i
 
 
-@jit
+@jit(nopython=True)
 def set_densities_numba(x, n, dx, n_cells):
     n_particles = x.size
     idx = np.empty((x.size, 1), np.int32)

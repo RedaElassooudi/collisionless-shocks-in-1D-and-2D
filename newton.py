@@ -16,7 +16,7 @@ def advance_positions(particles: Particles, dt):
     particles.x += particles.v[:, 0 : particles.dimX] * dt
 
 
-@jit
+@jit(nopython=True)
 def advance_jit(x, v, dt):
     for i in range(x.shape[0]):
         x[i] += v[i, 0] * dt

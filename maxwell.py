@@ -92,7 +92,7 @@ def solve_poisson_sor(u, f, dx, bound_cond, max_iter=100000, tol=1e-4, omega=1.5
                 break
 
 
-@jit
+@jit(nopython=True)
 def calc_curr_dens_1D3V_numba(grid_J, n_cells, idx, cic_weights, v, q):
     n_particles = len(idx)
 
@@ -101,7 +101,7 @@ def calc_curr_dens_1D3V_numba(grid_J, n_cells, idx, cic_weights, v, q):
         grid_J[(idx[i] + 1) % n_cells] += q * v[i] * cic_weights[i, 0]
 
 
-@jit
+@jit(nopython=True)
 def set_zero(x):
     for i in range(x.shape[0]):
         for j in range(x.shape[1]):

@@ -122,21 +122,46 @@ def calc_fields_1D3V(grid: Grid1D3V, dt, bc):
         grid.E[:, 0] += dt * -grid.J[:, 0] / eps_0
         grid.E[:, 1] += dt * (-grid.J[:, 1] / eps_0 - 2 * c * c / grid.dx * (B[:, 2] - np.roll(B[:, 2], 1)))
         grid.E[:, 2] += dt * (-grid.J[:, 2] / eps_0 + 2 * c * c / grid.dx * (B[:, 1] - np.roll(B[:, 1], 1)))
-        grid.B[:, 1] += dt * 2 / grid.dx * (np.roll(E[:, 2], -1) - E[:, 2])
-        grid.B[:, 2] -= dt * 2 / grid.dx * (np.roll(E[:, 1], -1) - E[:, 1])
+        dBy = dt * 2 / grid.dx * (np.roll(E[:, 2], -1) - E[:, 2])
+        dBz = -dt * 2 / grid.dx * (np.roll(E[:, 1], -1) - E[:, 1])
+
+        # Add limiters
+        max_change = 0.1  # Maximum allowed relative change
+        dBy = np.clip(dBy, -max_change * np.abs(B[:, 1]), max_change * np.abs(B[:, 1]))
+        dBz = np.clip(dBz, -max_change * np.abs(B[:, 2]), max_change * np.abs(B[:, 2]))
+
+        grid.B[:, 1] += dBy
+        grid.B[:, 2] += dBz
     else:
         # Calculate the fields at the full timestep
         grid.E[:, 0] += dt * -grid.J[:, 0] / eps_0
         grid.E[1:, 1] += dt * (-grid.J[1:, 1] / eps_0 - 2 * c * c / grid.dx * (B[1:, 2] - B[:-1, 2]))
         grid.E[1:, 2] += dt * (-grid.J[1:, 2] / eps_0 + 2 * c * c / grid.dx * (B[1:, 1] - B[:-1, 1]))
-        grid.B[:-1, 1] += dt * 2 / grid.dx * (E[1:, 2] - E[:-1, 2])
-        grid.B[:-1, 2] -= dt * 2 / grid.dx * (E[1:, 1] - E[:-1, 1])
+        dBy = dt * 2 / grid.dx * (E[1:, 2] - E[:-1, 2])
+        dBz = -dt * 2 / grid.dx * (E[1:, 1] - E[:-1, 1])
+
+        # Apply limiters to interior points
+        dBy = np.clip(dBy, -max_change * np.abs(B[:-1, 1]), max_change * np.abs(B[:-1, 1]))
+        dBz = np.clip(dBz, -max_change * np.abs(B[:-1, 2]), max_change * np.abs(B[:-1, 2]))
+
+        grid.B[:-1, 1] += dBy
+        grid.B[:-1, 2] += dBz
 
         # Calculate the boundary values using interpolation
         grid.E[0, 1] = 3 * grid.E[1, 1] - 3 * grid.E[2, 1] + grid.E[3, 1]
         grid.E[0, 2] = 3 * grid.E[1, 2] - 3 * grid.E[2, 2] + grid.E[3, 2]
-        grid.B[-1, 1] = 3 * grid.B[-2, 1] - 3 * grid.B[-3, 1] + grid.B[-4, 1]
-        grid.B[-1, 2] = 3 * grid.B[-2, 2] - 3 * grid.B[-3, 2] + grid.B[-4, 2]
+        By_right = 3 * grid.B[-2, 1] - 3 * grid.B[-3, 1] + grid.B[-4, 1]
+        Bz_right = 3 * grid.B[-2, 2] - 3 * grid.B[-3, 2] + grid.B[-4, 2]
+
+        # Apply limiters to boundary values
+        dBy_right = By_right - grid.B[-1, 1]
+        dBz_right = Bz_right - grid.B[0, 2]
+        
+        dBy_right = np.clip(dBy_right, -max_change * np.abs(grid.B[-1, 1]), max_change * np.abs(grid.B[-1, 1]))
+        dBz_right = np.clip(dBz_right, -max_change * np.abs(grid.B[-1, 2]), max_change * np.abs(grid.B[-1, 2]))
+        
+        grid.B[-1, 1] += dBy_right
+        grid.B[0, 2] += dBz_right
 
 
 def calc_E_1D3V(grid: Grid1D3V, dt, bc):

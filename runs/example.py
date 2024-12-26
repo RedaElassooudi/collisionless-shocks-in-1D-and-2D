@@ -16,13 +16,12 @@ def main():
     np.random.seed(42)
 
     num_particles = 20000  # Total number of particles (ions + electrons)
-    num_cells = 100  # Number of spatial grid cells
+    num_cells = 200  # Number of spatial grid cells
     x_max = 1.0  # Maximum position value
-    dx = x_max / num_cells  # Spatial step size
     dimx = 1
     dimv = 3
 
-    t_max = 1.0e1
+    t_max = 2.5e0
     max_iter = 20000
     damping_width = x_max // 10  # Size of region where dampening will occur
 
@@ -35,7 +34,7 @@ def main():
     """
     # Fabio code: instability occurs at w_pe * t = 25
 
-    params = Parameters(x_max, dx, t_max, max_iter, BoundaryCondition.Periodic, dimX=dimx, dimV=dimv)
+    params = Parameters(x_max, num_cells, t_max, max_iter, BoundaryCondition.Periodic, dimX=dimx, dimV=dimv)
 
     # Fabio code: instability occurs at w_pe * t = 25
     v_bulk = 0.9  # Stream velocity

@@ -39,29 +39,32 @@ def initialize_velocities_half_step_1D3V(grid: Grid1D3V, electrons: Particles, i
 
 
 def boris_pusher_1D3V(grid: Grid1D3V, particles: Particles, dt):
-    # extra source: https://www.particleincell.com/2011/vxb-rotation/
+    # Source: https://arxiv.org/pdf/1710.09164 (prof. Bacchini, Keppens & Lapenta are co-authors :o)
     # Get field at particle positions
     E = grid.E[particles.idx.flatten()] * (1 - particles.cic_weights) + grid.E[(particles.idx.flatten() + 1) % grid.n_cells] * particles.cic_weights
     B = (
         grid.B[particles.idx_staggered.flatten()] * (1 - particles.cic_weights_staggered)
         + grid.B[(particles.idx_staggered.flatten() + 1) % grid.n_cells] * particles.cic_weights_staggered
     )
+    ct = particles.qm * dt / 2
     # Calculate v⁻ = v_n + 𝜖
-    particles.v += particles.qm * E * dt / 2
+    particles.u += ct * E
 
-    beta = particles.qm * B * dt / 2
+    gamma_inv = 1 / np.sqrt(1 + particles.u**2)
+    beta = ct * B * gamma_inv
     # einsum really is the fastest: https://stackoverflow.com/a/45006970/15836556
     beta_sq = np.einsum("ij,ij->i", beta, beta)
     beta_sq = beta_sq[:, np.newaxis]
     s = (2 * beta) / (1 + beta_sq)
     # Calculate v⁻ + (v⁻ + (v⁻ × β)) × s
     # v_p = v⁻ + (v⁻ × β)
-    v_p = particles.v + np.cross(particles.v, beta)
+    u_p = particles.u + np.cross(particles.u, beta)
     # v⁻ + (v_p) × s
-    particles.v += np.cross(v_p, s)
+    particles.u += np.cross(u_p, s)
 
     # v_n+1 = previous + 𝜖
-    particles.v += particles.qm * E * dt / 2
+    particles.u += ct * E
+    particles.v = particles.u * gamma_inv
 
 
 def initialize_velocities_half_step_2D(grid: Grid2D, electrons: Particles, ions: Particles, params: Parameters, dt: float):

@@ -59,11 +59,12 @@ def two_stream(num_particles: int, x_max: float, v_the: float, v_bulk: float, nx
     pm = np.arange(num_electrons)
     pm = 1 - 2 * np.mod(pm + 1, 2)
     electrons.v[:, 0] += pm * v_bulk  # Drift plus thermal spread
+    electrons.v_to_u()
 
     ions = Particles(num_ions, 1, 3, m_i, q_i)
     ions.x = np.linspace(0, (1 - (1 / (2 * nx))) * x_max, num_ions, endpoint=False).reshape(num_ions, 1)
     ions.v.fill(0)
-
+    ions.v_to_u()
     return electrons, ions
 
 

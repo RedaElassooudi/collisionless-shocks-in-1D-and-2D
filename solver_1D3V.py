@@ -22,7 +22,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
     if params.bc is BoundaryCondition.Absorbing:
         assert params.damping_width > 0, "If using absorbing boundary condition, the damping width must be set"
 
-    grid = Grid1D3V(params.x_max, params.dx)
+    grid = Grid1D3V(params.x_max, params.n_cells)
     results = ResultsND()
 
     max_v = max(np.max(np.abs(electrons.v)), np.max(np.abs(ions.v)))
@@ -51,8 +51,8 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
     while t < params.t_max and step < params.max_iter:
         step += 1
 
-        max_v = max(np.max(np.abs(electrons.v)), np.max(np.abs(ions.v)))
-        dt = calculate_dt_max(params.dx, max_v, electrons.qm, electrons.dimX, safety_factor=20)
+        # max_v = max(np.max(np.abs(electrons.v)), np.max(np.abs(ions.v)))
+        # dt = calculate_dt_max(params.dx, max_v, electrons.qm, electrons.dimX, safety_factor=20)
         t += dt
 
         # Calculate J⁻ = q * v^(n+1/2) * n^(n)

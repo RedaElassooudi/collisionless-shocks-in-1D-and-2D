@@ -3,7 +3,7 @@ from matplotlib.animation import FuncAnimation
 import numpy as np
 
 
-def animate_phase_space(x_e, v_e, x_max):
+def animate_phase_space(x_e, v_e, x_max, name):
     # Will take a while to draw
     fig, ax = plt.subplots(figsize=(10, 6))
     scatter = ax.scatter([], [], s=1, alpha=0.5)
@@ -19,7 +19,7 @@ def animate_phase_space(x_e, v_e, x_max):
         return (scatter,)
 
     ani = FuncAnimation(fig, update, frames=len(x_e), interval=500)
-    ani.save("phase_space_animation.gif", writer="ffmpeg")
+    ani.save(f"{name}.gif", writer="ffmpeg")
 
 
 def field_1D(time_steps, x, F, name, t):

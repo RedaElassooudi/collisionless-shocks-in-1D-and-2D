@@ -57,7 +57,7 @@ def main():
     # Problem: where does v_i go?? Maybe spread too thin so very narrow bins?
     vis.velocity_profiles_ND(time_steps, res.v_e, res.v_i, res.t, 0)
     vis.phase_space_ND(time_steps, res.x_e, res.v_e, res.x_i, res.v_i, res.t)
-    # vis.animate_phase_space(res.x_e, res.v_e, x_max)
+    # vis.animate_phase_space(res.x_e, res.v_e, x_max, "phase_space_animation")
 
 
 def read_and_vis():

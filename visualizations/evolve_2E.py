@@ -13,10 +13,11 @@ import numpy as np
 # 1734884902 -> wave in Ex
 # 1734890999 -> update E twice, B not
 
-# x_e = Results.read("Results/1734890323/", "x_e")
-# v_e = Results.read("Results/1734890323/", "v_e")
-# x_max = 1
-# vis.animate_phase_space(x_e, v_e, x_max)
+run = "Results/2024-12-26T19h02m36s"
+x_e = Results.read(f"{run}/", "x_e")
+v_e = Results.read(f"{run}/", "v_e")
+x_max = 1
+vis.animate_phase_space(x_e, v_e, x_max, run.split("/")[-1])
 
 # n+1 cell faces
 dataE = Results.read("Results/1734890323/", "E")

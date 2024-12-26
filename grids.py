@@ -47,11 +47,11 @@ class Grid1D:
 
 # 1 spatial index, 3 components, adding B and J
 class Grid1D3V:
-    def __init__(self, x_max, dx):
+    def __init__(self, x_max, n_cells):
         self.x_max = x_max
-        self.dx = dx
-        self.x = np.arange(0, x_max, dx)
-        self.n_cells = self.x.size + 1
+        self.n_cells = n_cells
+        self.x = np.linspace(0, x_max, n_cells, endpoint=False)
+        self.dx = self.x[1] - self.x[0]
         # External fields:
         self.E_0 = np.zeros((self.n_cells, 3))
         self.B_0 = np.zeros((self.n_cells, 3))

@@ -6,6 +6,7 @@ class Particles:
     def __init__(self, num_particles: int, dimX: int, dimV: int, mass: float, charge: float):
         self.x = np.empty((num_particles, dimX))
         self.v = np.empty((num_particles, dimV))
+        self.u = np.empty((num_particles, dimV))
         self.idx: npt.NDArray = None
         self.idx_staggered: npt.NDArray = None
         # TODO: add extra dimension to store weights for higher order b-splines?
@@ -41,3 +42,7 @@ class Particles:
         KE = 1/2 * m * sum_{j=1}^{N} v_j**2
         """
         return 0.5 * self.m * np.sum(self.v**2)
+
+    def v_to_u(self):
+        gamma = 1 / np.sqrt(1 - self.v**2)
+        self.u = gamma * self.v

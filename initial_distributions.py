@@ -23,6 +23,8 @@ def initialize_particles(num_particles: int, x_max: float, v_bulk_e: float, v_bu
     np.copyto(ions.x, np.concatenate((x_i_left, x_i_right)))
     np.copyto(ions.v, np.random.normal(v_bulk_i, v_ti, (num_ions, dimv)))
 
+    electrons.v_to_u()
+    ions.v_to_u()
     return electrons, ions
 
 
@@ -47,7 +49,7 @@ def two_stream(num_particles: int, x_max: float, v_the: float, v_bulk: float, nx
 
     electrons = Particles(num_electrons, 1, 3, m_e, q_e)
     # endpoint = False makes sure the last particle has position x_n < x_max
-    electrons.x = np.linspace(0, (1 - (1 / (2 * nx))) * x_max, num_electrons, endpoint=False).reshape(num_electrons, 1)
+    electrons.x = np.linspace(0, (1 - (1 / (2 * num_electrons))) * x_max, num_electrons, endpoint=False).reshape(num_electrons, 1)
 
     electrons.x += eps * np.cos(2 * np.pi * mode / x_max * electrons.x)
     # Put particles which left the domain due to perturbation back inside the domain
@@ -59,11 +61,12 @@ def two_stream(num_particles: int, x_max: float, v_the: float, v_bulk: float, nx
     pm = np.arange(num_electrons)
     pm = 1 - 2 * np.mod(pm + 1, 2)
     electrons.v[:, 0] += pm * v_bulk  # Drift plus thermal spread
+    electrons.v_to_u()
 
     ions = Particles(num_ions, 1, 3, m_i, q_i)
-    ions.x = np.linspace(0, (1 - (1 / (2 * nx))) * x_max, num_ions, endpoint=False).reshape(num_ions, 1)
+    ions.x = np.linspace(0, (1 - (1 / (2 * num_ions))) * x_max, num_ions, endpoint=False).reshape(num_ions, 1)
     ions.v.fill(0)
-
+    ions.v_to_u()
     return electrons, ions
 
 
@@ -112,6 +115,8 @@ def shock_tube(num_particles: int, x_max: float, v_the: float, v_bulk: float):
     # Left ions have E(v_x) = v_bulk, right ions have E(v_x) = 0: same as electrons
     ions.v[0:num_i_left, 0] += v_bulk
 
+    electrons.v_to_u()
+    ions.v_to_u()
     return electrons, ions
 
 
@@ -153,4 +158,6 @@ def bump_on_tail(num_particles: int, x_max: float, v_the: float, v_bump: float, 
     ions.x = np.random.uniform(0, x_max, (num_ions, 1))
     ions.v.fill(0.0)
 
+    electrons.v_to_u()
+    ions.v_to_u()
     return electrons, ions

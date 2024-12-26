@@ -93,7 +93,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
         grid.J = (grid.J + J_prev) / 2
 
         # Calculate the fields E^(n+1), B^(n+1)
-        maxwell.calc_fields_1D3V(grid, dt, params.bc)
+        maxwell.calc_fields_1D3V(grid, dt)
 
         # Calculate velocities v^(n+3/2) using the boris pusher
         newton.boris_pusher_1D3V(grid, electrons, dt)

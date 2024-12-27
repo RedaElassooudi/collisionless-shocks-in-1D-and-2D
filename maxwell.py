@@ -130,8 +130,8 @@ def calc_fields_1D3V(grid: Grid1D3V, dt):
     dBz = -dt / grid.dx * (np.roll(E[:, 1], -1) - E[:, 1])
     ## Apply limiter
     max_change = 0.1  # Maximum allowed relative change
-    dBy = np.clip(dBy, -max_change * np.abs(grid.B[:, 1]), max_change * np.abs(grid.B[:, 1]))
-    dBz = np.clip(dBz, -max_change * np.abs(grid.B[:, 2]), max_change * np.abs(grid.B[:, 2]))
+    dBy = np.clip(dBy, -max_change * np.abs(grid.B[:, 1]) - 1e-5, max_change * np.abs(grid.B[:, 1]) + 1e-5)
+    dBz = np.clip(dBz, -max_change * np.abs(grid.B[:, 2]) - 1e-5, max_change * np.abs(grid.B[:, 2]) + 1e-5)
     ## Apply update
     grid.B[:, 1] += dBy
     grid.B[:, 2] += dBz
@@ -142,8 +142,8 @@ def calc_fields_1D3V(grid: Grid1D3V, dt):
     # Update B restricted by limiter for +dt/2 (total: +dt)
     dBy = dt / grid.dx * (np.roll(grid.E[:, 2], -1) - grid.E[:, 2])
     dBz = -dt / grid.dx * (np.roll(grid.E[:, 1], -1) - grid.E[:, 1])
-    dBy = np.clip(dBy, -max_change * np.abs(B[:, 1]), max_change * np.abs(B[:, 1]))
-    dBz = np.clip(dBz, -max_change * np.abs(B[:, 2]), max_change * np.abs(B[:, 2]))
+    dBy = np.clip(dBy, -max_change * np.abs(B[:, 1]) - 1e-5, max_change * np.abs(B[:, 1]) + 1e-5)
+    dBz = np.clip(dBz, -max_change * np.abs(B[:, 2]) - 1e-5, max_change * np.abs(B[:, 2]) + 1e-5)
     grid.B[:, 1] += dBy
     grid.B[:, 2] += dBz
 

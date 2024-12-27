@@ -99,81 +99,99 @@ def calc_curr_dens_1D3V(grid: Grid1D3V, electrons: Particles, ions: Particles):
     np.add.at(grid.J, (ions.idx.flatten() + 1) % grid.n_cells, ions.v * ions.q * ions.cic_weights)
 
 
-def calc_fields_1D3V(grid: Grid1D3V, dt, bc):
+def calc_fields_1D3V(grid: Grid1D3V, dt):
     """
+    Solve Maxwell's equations on Yee grid **assuming PERIODIC boundary conditions**!!!\n
+    Uses sub-cycling, and limiter on B\n
     Maxwell's equations for 1D3V become:
 
-    dE_x/dt = -J_x / eps_0\n
-    dE_y/dt = -J_y / eps_0 - c² dB_z/dx\n
-    dE_z/dt = -J_z / eps_0 + c² dB_y/dx\n
-    dB_x/dt = 0\n
-    dB_y/dt = dE_z/dx\n
-    dB_z/dt = -dE_y/dx\n
+    * dE_x/dt = -J_x / eps_0\n
+    * dE_y/dt = -J_y / eps_0 - c² dB_z/dx\n
+    * dE_z/dt = -J_z / eps_0 + c² dB_y/dx\n
+    * dB_x/dt = 0\n
+    * dB_y/dt = dE_z/dx\n
+    * dB_z/dt = -dE_y/dx\n
     """
-    # To discretize th efields we assume E is known at integer gridpoints while B is known at staggered gridpoints
+    # To discretize the fields we assume E is known at integer gridpoints while B is known at staggered gridpoints
     # The grid of B is defined to be the grid of E plus dx/2
     # The derivatives are then calculated via central difference
     # Store temp values of fields
     E = grid.E.copy()
+    dt /= 2
+
+    # Update E unrestricted for +dt/2
+    grid.E[:, 0] += dt * -grid.J[:, 0] / eps_0
+    grid.E[:, 1] += dt * (-grid.J[:, 1] / eps_0 - c * c / grid.dx * (grid.B[:, 2] - np.roll(grid.B[:, 2], 1)))
+    grid.E[:, 2] += dt * (-grid.J[:, 2] / eps_0 + c * c / grid.dx * (grid.B[:, 1] - np.roll(grid.B[:, 1], 1)))
+
+    # Update B restricted by limiter for +dt/2
+    ## Calculate update
+    dBy = dt / grid.dx * (np.roll(E[:, 2], -1) - E[:, 2])
+    dBz = -dt / grid.dx * (np.roll(E[:, 1], -1) - E[:, 1])
+    ## Apply limiter
+    max_change = 0.1  # Maximum allowed relative change
+    dBy = np.clip(dBy, -max_change * np.abs(grid.B[:, 1]), max_change * np.abs(grid.B[:, 1]))
+    dBz = np.clip(dBz, -max_change * np.abs(grid.B[:, 2]), max_change * np.abs(grid.B[:, 2]))
+    ## Apply update
+    grid.B[:, 1] += dBy
+    grid.B[:, 2] += dBz
+
+    # Remember B at t = n + 1/2 for update to E later
     B = grid.B.copy()
 
-    if bc is BoundaryCondition.Periodic:
-        # Calculate the fields at the full timestep
-        grid.E[:, 0] += dt * -grid.J[:, 0] / eps_0
-        grid.E[:, 1] += dt * (-grid.J[:, 1] / eps_0 - 2 * c * c / grid.dx * (B[:, 2] - np.roll(B[:, 2], 1)))
-        grid.E[:, 2] += dt * (-grid.J[:, 2] / eps_0 + 2 * c * c / grid.dx * (B[:, 1] - np.roll(B[:, 1], 1)))
-        dBy = dt * 2 / grid.dx * (np.roll(E[:, 2], -1) - E[:, 2])
-        dBz = -dt * 2 / grid.dx * (np.roll(E[:, 1], -1) - E[:, 1])
+    # Update B restricted by limiter for +dt/2 (total: +dt)
+    dBy = dt / grid.dx * (np.roll(grid.E[:, 2], -1) - grid.E[:, 2])
+    dBz = -dt / grid.dx * (np.roll(grid.E[:, 1], -1) - grid.E[:, 1])
+    dBy = np.clip(dBy, -max_change * np.abs(B[:, 1]), max_change * np.abs(B[:, 1]))
+    dBz = np.clip(dBz, -max_change * np.abs(B[:, 2]), max_change * np.abs(B[:, 2]))
+    grid.B[:, 1] += dBy
+    grid.B[:, 2] += dBz
 
-        # Add limiters
-        max_change = 0.1  # Maximum allowed relative change
-        dBy = np.clip(dBy, -max_change * np.abs(B[:, 1]), max_change * np.abs(B[:, 1]))
-        dBz = np.clip(dBz, -max_change * np.abs(B[:, 2]), max_change * np.abs(B[:, 2]))
+    # Update E unrestricted for +dt/2 (total: +dt)
+    grid.E[:, 0] += dt * -grid.J[:, 0] / eps_0
+    grid.E[:, 1] += dt * (-grid.J[:, 1] / eps_0 - c * c / grid.dx * (B[:, 2] - np.roll(B[:, 2], 1)))
+    grid.E[:, 2] += dt * (-grid.J[:, 2] / eps_0 + c * c / grid.dx * (B[:, 1] - np.roll(B[:, 1], 1)))
 
-        grid.B[:, 1] += dBy
-        grid.B[:, 2] += dBz
-    else:
-        # Calculate the fields at the full timestep
-        grid.E[:, 0] += dt * -grid.J[:, 0] / eps_0
-        grid.E[1:, 1] += dt * (-grid.J[1:, 1] / eps_0 - 2 * c * c / grid.dx * (B[1:, 2] - B[:-1, 2]))
-        grid.E[1:, 2] += dt * (-grid.J[1:, 2] / eps_0 + 2 * c * c / grid.dx * (B[1:, 1] - B[:-1, 1]))
-        dBy = dt * 2 / grid.dx * (E[1:, 2] - E[:-1, 2])
-        dBz = -dt * 2 / grid.dx * (E[1:, 1] - E[:-1, 1])
 
-        # Apply limiters to interior points
-        dBy = np.clip(dBy, -max_change * np.abs(B[:-1, 1]), max_change * np.abs(B[:-1, 1]))
-        dBz = np.clip(dBz, -max_change * np.abs(B[:-1, 2]), max_change * np.abs(B[:-1, 2]))
+def calc_fields_1D3V_nonperiodic(grid: Grid1D3V, dt):
+    E = grid.E.copy()
+    max_change = 0.1  # Maximum allowed relative change
+    # Calculate the fields at the full timestep
+    grid.E[:, 0] += dt * -grid.J[:, 0] / eps_0
+    grid.E[1:, 1] += dt * (-grid.J[1:, 1] / eps_0 - c * c / grid.dx * (grid.B[1:, 2] - grid.B[:-1, 2]))
+    grid.E[1:, 2] += dt * (-grid.J[1:, 2] / eps_0 + c * c / grid.dx * (grid.B[1:, 1] - grid.B[:-1, 1]))
+    dBy = dt / grid.dx * (E[1:, 2] - E[:-1, 2])
+    dBz = -dt / grid.dx * (E[1:, 1] - E[:-1, 1])
 
-        grid.B[:-1, 1] += dBy
-        grid.B[:-1, 2] += dBz
+    # Apply limiters to interior points
+    dBy = np.clip(dBy, -max_change * np.abs(grid.B[:-1, 1]), max_change * np.abs(grid.B[:-1, 1]))
+    dBz = np.clip(dBz, -max_change * np.abs(grid.B[:-1, 2]), max_change * np.abs(grid.B[:-1, 2]))
 
-        # Calculate the boundary values using interpolation
-        grid.E[0, 1] = 3 * grid.E[1, 1] - 3 * grid.E[2, 1] + grid.E[3, 1]
-        grid.E[0, 2] = 3 * grid.E[1, 2] - 3 * grid.E[2, 2] + grid.E[3, 2]
-        By_right = 3 * grid.B[-2, 1] - 3 * grid.B[-3, 1] + grid.B[-4, 1]
-        Bz_right = 3 * grid.B[-2, 2] - 3 * grid.B[-3, 2] + grid.B[-4, 2]
+    grid.B[:-1, 1] += dBy
+    grid.B[:-1, 2] += dBz
 
-        # Apply limiters to boundary values
-        dBy_right = By_right - grid.B[-1, 1]
-        dBz_right = Bz_right - grid.B[0, 2]
-        
-        dBy_right = np.clip(dBy_right, -max_change * np.abs(grid.B[-1, 1]), max_change * np.abs(grid.B[-1, 1]))
-        dBz_right = np.clip(dBz_right, -max_change * np.abs(grid.B[-1, 2]), max_change * np.abs(grid.B[-1, 2]))
-        
-        grid.B[-1, 1] += dBy_right
-        grid.B[0, 2] += dBz_right
+    # Calculate the boundary values using interpolation
+    grid.E[0, 1] = 3 * grid.E[1, 1] - 3 * grid.E[2, 1] + grid.E[3, 1]
+    grid.E[0, 2] = 3 * grid.E[1, 2] - 3 * grid.E[2, 2] + grid.E[3, 2]
+    By_right = 3 * grid.B[-2, 1] - 3 * grid.B[-3, 1] + grid.B[-4, 1]
+    Bz_right = 3 * grid.B[-2, 2] - 3 * grid.B[-3, 2] + grid.B[-4, 2]
+
+    # Apply limiters to boundary values
+    dBy_right = By_right - grid.B[-1, 1]
+    dBz_right = Bz_right - grid.B[0, 2]
+
+    dBy_right = np.clip(dBy_right, -max_change * np.abs(grid.B[-1, 1]), max_change * np.abs(grid.B[-1, 1]))
+    dBz_right = np.clip(dBz_right, -max_change * np.abs(grid.B[-1, 2]), max_change * np.abs(grid.B[-1, 2]))
+
+    grid.B[-1, 1] += dBy_right
+    grid.B[0, 2] += dBz_right
 
 
 def calc_E_1D3V(grid: Grid1D3V, dt, bc):
     """
-    Maxwell's equations for 1D3V become:
-
     dE_x/dt = -J_x / eps_0\n
     dE_y/dt = -J_y / eps_0 - c² dB_z/dx\n
     dE_z/dt = -J_z / eps_0 + c² dB_y/dx\n
-    dB_x/dt = 0\n
-    dB_y/dt = dE_z/dx\n
-    dB_z/dt = -dE_y/dx\n
     """
     # The fields E and B are assumed to be known at the same gridpoints, we use upwind or downwind depending on the sign of the spatial derivative
     if bc is BoundaryCondition.Periodic:
@@ -195,11 +213,6 @@ def calc_E_1D3V(grid: Grid1D3V, dt, bc):
 
 def calc_B_1D3V(grid: Grid1D3V, dt, bc):
     """
-    Maxwell's equations for 1D3V become:
-
-    dE_x/dt = -J_x / eps_0\n
-    dE_y/dt = -J_y / eps_0 - c² dB_z/dx\n
-    dE_z/dt = -J_z / eps_0 + c² dB_y/dx\n
     dB_x/dt = 0\n
     dB_y/dt = dE_z/dx\n
     dB_z/dt = -dE_y/dx\n

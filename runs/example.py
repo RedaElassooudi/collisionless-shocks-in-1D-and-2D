@@ -16,17 +16,12 @@ def main():
     np.random.seed(42)
 
     num_particles = 20000  # Total number of particles (ions + electrons)
-    num_cells = 100  # Number of spatial grid cells
+    num_cells = 200  # Number of spatial grid cells
     x_max = 1.0  # Maximum position value
-    dx = x_max / num_cells  # Spatial step size
     dimx = 1
     dimv = 3
 
-<<<<<<< Updated upstream
-    t_max = 1.0e1
-=======
     t_max = 5e0
->>>>>>> Stashed changes
     max_iter = 20000
     damping_width = x_max // 10  # Size of region where dampening will occur
 
@@ -39,7 +34,7 @@ def main():
     """
     # Fabio code: instability occurs at w_pe * t = 25
 
-    params = Parameters(x_max, dx, t_max, max_iter, BoundaryCondition.Periodic, dimX=dimx, dimV=dimv)
+    params = Parameters(x_max, num_cells, t_max, max_iter, BoundaryCondition.Periodic, dimX=dimx, dimV=dimv)
 
     # Fabio code: instability occurs at w_pe * t = 25
     v_bulk = 0.9  # Stream velocity
@@ -62,7 +57,7 @@ def main():
     # Problem: where does v_i go?? Maybe spread too thin so very narrow bins?
     vis.velocity_profiles_ND(time_steps, res.v_e, res.v_i, res.t, 0)
     vis.phase_space_ND(time_steps, res.x_e, res.v_e, res.x_i, res.v_i, res.t)
-    # vis.animate_phase_space(res.x_e, res.v_e, x_max)
+    # vis.animate_phase_space(res.x_e, res.v_e, x_max, "phase_space_animation")
 
 
 def read_and_vis():

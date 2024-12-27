@@ -22,7 +22,11 @@ def main():
     dimx = 1
     dimv = 3
 
+<<<<<<< Updated upstream
     t_max = 1.0e1
+=======
+    t_max = 5e0
+>>>>>>> Stashed changes
     max_iter = 20000
     damping_width = x_max // 10  # Size of region where dampening will occur
 

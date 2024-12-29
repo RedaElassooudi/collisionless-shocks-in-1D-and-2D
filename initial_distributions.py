@@ -49,7 +49,7 @@ def two_stream(num_particles: int, x_max: float, v_the: float, v_bulk: float, nx
 
     electrons = Particles(num_electrons, 1, 3, m_e, q_e)
     # endpoint = False makes sure the last particle has position x_n < x_max
-    electrons.x = np.linspace(0, (1 - (1 / (2 * num_electrons))) * x_max, num_electrons, endpoint=False).reshape(num_electrons, 1)
+    electrons.x = np.linspace(0, x_max, num_electrons, endpoint=False).reshape(num_electrons, 1)
 
     electrons.x += eps * np.cos(2 * np.pi * mode / x_max * electrons.x)
     # Put particles which left the domain due to perturbation back inside the domain
@@ -64,7 +64,7 @@ def two_stream(num_particles: int, x_max: float, v_the: float, v_bulk: float, nx
     electrons.v_to_u()
 
     ions = Particles(num_ions, 1, 3, m_i, q_i)
-    ions.x = np.linspace(0, (1 - (1 / (2 * num_ions))) * x_max, num_ions, endpoint=False).reshape(num_ions, 1)
+    ions.x = np.linspace(0, x_max, num_ions, endpoint=False).reshape(num_ions, 1)
     ions.v.fill(0)
     ions.v_to_u()
     return electrons, ions

@@ -18,6 +18,9 @@ def periodic_bc(electrons: Particles, ions: Particles, x_max: float):
 
 
 def _periodic_bc(particles: Particles, x_max: float):
+    # If a particle has x = -0.5 * 10^(-16) or smaller, the operation x % 1.0 will return 1.0 due to numerical errors
+    # This will cause issues when calculating the cell index of the particle (1.0 / 0.05 = 200, while max idx is 199)
+    particles.x += -1e-10
     particles.x %= x_max
 
 

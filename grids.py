@@ -66,15 +66,14 @@ class Grid1D3V:
         # Cell averaged-quantities
         self.n_e = np.empty(self.n_cells)
         self.n_i = np.empty(self.n_cells)
-        self.rho = np.empty(self.n_cells)
 
     def set_densities(self, electrons: Particles, ions: Particles):
         """
         Set the electron density, ion density and charge density on the grid
         """
         dummy = electrons.x / self.dx
-        electrons.idx = dummy.astype(int)
-        electrons.idx_staggered = (dummy - 0.5).astype(int)
+        np.floor(dummy, out=electrons.idx, casting="unsafe")
+        np.floor(dummy - 0.5, out=electrons.idx_staggered, casting="unsafe")
         electrons.cic_weights = dummy - electrons.idx
         electrons.cic_weights_staggered = dummy - electrons.idx_staggered
         self.n_e.fill(0)
@@ -83,19 +82,13 @@ class Grid1D3V:
         np.add.at(self.n_e, (electrons.idx + 1) % self.n_cells, electrons.cic_weights)
 
         dummy = ions.x / self.dx
-        ions.idx = dummy.astype(int)
-        ions.idx_staggered = (dummy - 0.5).astype(int)
+        np.floor(dummy, out=ions.idx, casting="unsafe")
+        np.floor(dummy - 0.5, out=ions.idx_staggered, casting="unsafe")
         ions.cic_weights = dummy - ions.idx
         ions.cic_weights_staggered = dummy - ions.idx_staggered
         self.n_i.fill(0)
         np.add.at(self.n_i, ions.idx, 1 - ions.cic_weights)
         np.add.at(self.n_i, (ions.idx + 1) % self.n_cells, ions.cic_weights)
-
-        self.rho = electrons.q * self.n_e + ions.q * self.n_i
-        # Remove mean charge, I'm not sure about the physical validity of doing this?
-        # --> is only physically correct for quasi neutrality? so might not hold for open boundary at t!= 0.
-        # Thus we might need to reconsider this for the 1D1V case as wel.
-        # self.rho -= np.mean(self.rho)
 
 
 # 2 spatial indices, 2/3 components

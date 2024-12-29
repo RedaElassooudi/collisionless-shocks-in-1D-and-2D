@@ -7,11 +7,11 @@ class Particles:
         self.x = np.empty((num_particles, dimX))
         self.v = np.empty((num_particles, dimV))
         self.u = np.empty((num_particles, dimV))
-        self.idx: npt.NDArray = None
-        self.idx_staggered: npt.NDArray = None
+        self.idx: npt.NDArray = np.empty((num_particles, dimX), dtype=np.int32)
+        self.idx_staggered: npt.NDArray = np.empty((num_particles, dimX), dtype=np.int32)
         # TODO: add extra dimension to store weights for higher order b-splines?
-        self.cic_weights: npt.NDArray = None
-        self.cic_weights_staggered: npt.NDArray = None
+        self.cic_weights: npt.NDArray = np.empty((num_particles, dimX), dtype=np.float64)
+        self.cic_weights_staggered: npt.NDArray = np.empty((num_particles, dimX), dtype=np.float64)
         self.m = mass
         self.q = charge
         self.qm = charge / mass

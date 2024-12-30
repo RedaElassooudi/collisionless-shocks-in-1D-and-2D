@@ -3,6 +3,7 @@ import pickle
 from typing import Union
 
 import grids
+from parameters import Parameters
 from particles import Particles
 
 
@@ -86,7 +87,7 @@ class Results:
             data = pickle.load(f)
         return data
 
-    def write(self, dirname):
+    def write(self, dirname, parameters: Parameters):
         """
         Save the results in a file under "dirname/".
         Each variable gets its own file.
@@ -94,6 +95,10 @@ class Results:
         -> inefficient when datasize increases too much.
         """
         os.makedirs(dirname, exist_ok=True)
+
+        file = os.path.join(dirname, "parameters.txt")
+        with open(file, "w") as f:
+            f.write(repr(parameters))
 
         names_dict = {
             "t": self.t,
@@ -126,8 +131,8 @@ class Results1D(Results):
         super().save_fields(grid)
         self.phi.append(grid.phi.copy())
 
-    def write(self, dirname):
-        super().write(dirname)
+    def write(self, dirname, p: Parameters):
+        super().write(dirname, p)
 
         names_dict = {"phi": self.phi}
 
@@ -149,8 +154,8 @@ class ResultsND(Results):
         self.J.append(grid.J.copy())
         self.B.append(grid.B.copy())
 
-    def write(self, dirname):
-        super().write(dirname)
+    def write(self, dirname, p: Parameters):
+        super().write(dirname, p)
 
         names_dict = {"J": self.J, "B": self.B}
 

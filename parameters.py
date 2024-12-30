@@ -17,6 +17,7 @@ class Parameters:
     bc: BoundaryCondition
     dimX: int
     dimV: int
+    num_particles: int = -1
     damping_width: float = 0
     SOR_max_iter: int = 1000
     SOR_tol: float = 1.0e-6
@@ -26,3 +27,10 @@ class Parameters:
 
     def __post_init__(self):
         self.dx = self.x_max / self.n_cells
+
+    def __repr__(self):
+        # Generate a string representation with one field per line
+        field_strings = [f"{field}: {getattr(self, field)}" for field in self.__dataclass_fields__]
+        return f"{self.__class__.__name__}(\n  " + ",\n  ".join(field_strings) + "\n)"
+
+    __str__ = __repr__

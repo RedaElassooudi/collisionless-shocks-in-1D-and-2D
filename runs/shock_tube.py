@@ -1,3 +1,8 @@
+import sys
+
+sys.path.append("./")
+sys.path.append("../")
+
 # Import your local modules for the simulation
 from initial_distributions import shock_tube
 from parameters import Parameters  # If it doesn't have boundary_condition/damping_width, remove them below.
@@ -36,11 +41,11 @@ if __name__ == "__main__":
 
     np.random.seed(42)
 
-    num_particles = 20_000
+    num_particles = 50_000
     num_cells = 200
     x_max = 1.0
     dx = x_max / num_cells
-    t_max = 3.0e2
+    t_max = 2.5e0
     max_iter = 20_000
 
     V0 = 0.9
@@ -48,7 +53,7 @@ if __name__ == "__main__":
 
     el, io = shock_tube(num_particles, x_max, VT, V0)
 
-    params = Parameters(x_max, dx, t_max, max_iter, BoundaryCondition.Open)
+    params = Parameters(x_max, num_cells, t_max, max_iter, BoundaryCondition.Periodic, 1, 3, num_particles=num_particles)
 
     res_3v = solver_1D3V.simulate(el, io, params)
 
@@ -153,7 +158,7 @@ if __name__ == "__main__":
     sp.plot_space_time_field(res_3v.t, res_3v.x, res_3v.B[..., 1], field_name="By")
     sp.plot_space_time_field(res_3v.t, res_3v.x, res_3v.B[..., 2], field_name="Bz")
 
-    sp.plot_field_spectrogram_in_space(res_3v.t, res_3v.E[..., 0], 1, field_name="Ex", k_max=None, log_scale=True)
+    # sp.plot_field_spectrogram_in_space(res_3v.t, res_3v.E[..., 0], 1, field_name="Ex", k_max=None, log_scale=True)
 
     # Phase-space & velocity distributions
     mid_ts = Nt // 2

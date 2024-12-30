@@ -32,9 +32,7 @@ def main():
     """
     el, io = initialize_particles(num_particles, x_max, bulk_velocity_e, bulk_velocity_i, dimx, dimv)
     """
-    # Fabio code: instability occurs at w_pe * t = 25
-
-    params = Parameters(x_max, num_cells, t_max, max_iter, BoundaryCondition.Periodic, dimX=dimx, dimV=dimv)
+    params = Parameters(x_max, num_cells, t_max, max_iter, BoundaryCondition.Periodic, dimX=dimx, dimV=dimv, num_particles=num_particles)
 
     # Fabio code: instability occurs at w_pe * t = 25
     v_bulk = 0.9  # Stream velocity

@@ -1,0 +1,27 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: >-
+  Introduction to Plasma Dynamics - group project - code
+  repository
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Simon
+    family-names: Desimpelaere
+  - given-names: Robbe
+    family-names: Alliet
+  - given-names: Harikrishnan
+    family-names: Aravindakshan
+  - given-names: Reda
+    family-names: Elassooudi
+  - given-names: Bodhisatwa
+    family-names: Datta
+  - given-names: Maximilien
+    family-names: Péters de Bonhomme
+repository-code: >-
+  https://github.com/RedaElassooudi/collisionless-shocks-in-1D-and-2D
+license: Apache-2.0

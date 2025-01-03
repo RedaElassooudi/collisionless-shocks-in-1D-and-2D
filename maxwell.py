@@ -28,7 +28,8 @@ def poisson_solver(grid: Grid1D, electrons: Particles, ions: Particles, params: 
     # if first:
     #     naive_poisson_solver(grid, params.dx)
     # solve_poisson_sor(grid.phi, -grid.rho / eps_0, params.dx, params.bc, params.SOR_max_iter, params.SOR_tol, params.SOR_omega)
-    thomas_solver(grid, params.dx, tridiag)
+    naive_poisson_solver(grid, grid.dx)
+    # thomas_solver(grid, params.dx, tridiag)
 
     # Electric field calculation
     # E_i = - (phi_i+1 - phi_i) / dx

@@ -51,11 +51,11 @@ if __name__ == "__main__":
     V0 = 0.9
     VT = 1e-8
 
-    el, io = shock_tube(num_particles, x_max, VT, V0)
+    el, io = shock_tube(num_particles, x_max, VT, V0, dimV=1)
 
-    params = Parameters(x_max, num_cells, t_max, max_iter, BoundaryCondition.Periodic, 1, 3, num_particles=num_particles)
+    params = Parameters(x_max, num_cells, t_max, max_iter, BoundaryCondition.Open, 1, 1, num_particles=num_particles)
 
-    res_3v = solver_1D3V.simulate(el, io, params)
+    res_3v = solver_1D.simulate(el, io, params)
 
     time_steps = [0, len(res_3v.t) // 2, len(res_3v.t) - 1]
 

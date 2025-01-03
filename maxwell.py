@@ -37,9 +37,9 @@ def poisson_solver(grid: Grid1D, electrons: Particles, ions: Particles, params: 
     if params.bc is BoundaryCondition.Periodic:
         # Warning: you will get an (unphysically) large field at the right
         # boundary if phi(x) is not periodic
-        grid.E[-1] = -(grid.phi[0] - grid.phi[-1]) / params.dx + grid.E_0[-1]
+        grid.E[-1] = -(grid.phi[0] - grid.phi[-1]) / params.dx
     else:  # use second order interpolation to get the last value
-        grid.E[-1] = 2 * grid.E[-3] - grid.E[-2] + grid.E_0[-1]
+        grid.E[-1] = 2 * grid.E[-3] - grid.E[-2]
 
 
 def naive_poisson_solver(grid: Grid1D, dx: float):
@@ -58,7 +58,6 @@ def naive_poisson_solver(grid: Grid1D, dx: float):
 def thomas_solver(grid: Grid1D, dx: float, tridiag):
     dens_phi = linalg.spsolve(tridiag, -dx * dx * grid.rho[1:] / eps_0)
     grid.phi = np.concatenate(([0], dens_phi))
-
 
 
 # -----------------------------------------------------

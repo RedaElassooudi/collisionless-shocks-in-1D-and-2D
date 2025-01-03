@@ -23,15 +23,15 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
     if params.bc is BoundaryCondition.Absorbing:
         assert params.damping_width > 0, "If using absorbing boundary condition, the damping width must be set"
 
-    grid = Grid1D(params.x_max, params.dx)
+    grid = Grid1D(params.x_max, params.n_cells)
     results = Results1D()
 
     # Creates sparse matrix for Thomas solver
-    main_diag = -2 * np.ones(grid.n_cells-1)
-    off_diag = 1 * np.ones(grid.n_cells-2)
-    tridiag = (np.diag(main_diag) + np.diag(off_diag, k=1) + np.diag(off_diag, k=-1))
+    main_diag = -2 * np.ones(grid.n_cells - 1)
+    off_diag = 1 * np.ones(grid.n_cells - 2)
+    tridiag = np.diag(main_diag) + np.diag(off_diag, k=1) + np.diag(off_diag, k=-1)
     if params.bc is not BoundaryCondition.Periodic:
-        tridiag[grid.n_cells-2, grid.n_cells-5:] = np.array([-1, 4, -5, 2])
+        tridiag[grid.n_cells - 2, grid.n_cells - 5 :] = np.array([-1, 4, -5, 2])
     tridiag = sparse.csr_matrix(tridiag)
 
     max_v = max(np.max(np.abs(electrons.v)), np.max(np.abs(ions.v)))
@@ -54,7 +54,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
     step = 0  # Number of iterations
     # TODO: We need a proper definition of unit_time, iterating to t = 1 takes EXTREMELY long (using SOR)
     # => What does it mean to simulate until t = 1?
-    while t < params.t_max:
+    while t < params.t_max and step < params.max_iter:
         step += 1
 
         max_v = max(np.max(np.abs(electrons.v)), np.max(np.abs(ions.v)))

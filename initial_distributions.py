@@ -28,7 +28,7 @@ def initialize_particles(num_particles: int, x_max: float, v_bulk_e: float, v_bu
     return electrons, ions
 
 
-def two_stream(num_particles: int, x_max: float, v_the: float, v_bulk: float, nx: int, eps: float, mode: int):
+def two_stream(num_particles: int, x_max: float, v_the: float, v_bulk: float, nx: int, eps: float, mode: int, dimV: int):
     """
     Initializes a two-stream instability setup with electron and ion particles.
 
@@ -47,7 +47,7 @@ def two_stream(num_particles: int, x_max: float, v_the: float, v_bulk: float, nx
     # Charge neutrality: n_e = n_i
     num_electrons = num_ions = num_particles // 2
 
-    electrons = Particles(num_electrons, 1, 3, m_e, q_e)
+    electrons = Particles(num_electrons, 1, dimV, m_e, q_e)
     # endpoint = False makes sure the last particle has position x_n < x_max
     electrons.x = np.linspace(0, x_max, num_electrons, endpoint=False).reshape(num_electrons, 1)
 
@@ -57,20 +57,20 @@ def two_stream(num_particles: int, x_max: float, v_the: float, v_bulk: float, nx
     electrons.x[electrons.x >= x_max] -= x_max
 
     # Only two streams in x directions
-    electrons.v = v_the * np.random.randn(num_electrons, 3)
+    electrons.v = v_the * np.random.randn(num_electrons, dimV)
     pm = np.arange(num_electrons)
     pm = 1 - 2 * np.mod(pm + 1, 2)
     electrons.v[:, 0] += pm * v_bulk  # Drift plus thermal spread
     electrons.v_to_u()
 
-    ions = Particles(num_ions, 1, 3, m_i, q_i)
+    ions = Particles(num_ions, 1, dimV, m_i, q_i)
     ions.x = np.linspace(0, x_max, num_ions, endpoint=False).reshape(num_ions, 1)
     ions.v.fill(0)
     ions.v_to_u()
     return electrons, ions
 
 
-def shock_tube(num_particles: int, x_max: float, v_the: float, v_bulk: float):
+def shock_tube(num_particles: int, x_max: float, v_the: float, v_bulk: float, dimV: int):
     """
     All particles have random individual thermal speed drawn from Boltzmann distribution with v_the = v_thi
     - 50% electrons in [0, x/2) with average speed `v_bulk`,
@@ -96,14 +96,14 @@ def shock_tube(num_particles: int, x_max: float, v_the: float, v_bulk: float):
     num_i_right = num_ions - num_i_left
 
     # Create electron & ion containers
-    electrons = Particles(num_electrons, 1, 3, m_e, q_e)
-    ions = Particles(num_ions, 1, 3, m_i, q_i)
+    electrons = Particles(num_electrons, 1, dimV, m_e, q_e)
+    ions = Particles(num_ions, 1, dimV, m_i, q_i)
 
     electrons_left_x = np.random.uniform(0, x_max / 2, (num_e_left, 1))
     electrons_right_x = np.random.uniform(x_max / 2, x_max, (num_e_right, 1))
     electrons.x = np.vstack((electrons_left_x, electrons_right_x))
 
-    electrons.v = v_the * np.random.randn(num_electrons, 3)
+    electrons.v = v_the * np.random.randn(num_electrons, dimV)
     # Left electrons have E(v_x) = v_bulk, right electrons have E(v_x) = 0
     electrons.v[0:num_e_left, 0] += v_bulk
 
@@ -111,7 +111,7 @@ def shock_tube(num_particles: int, x_max: float, v_the: float, v_bulk: float):
     ions_right_x = np.random.uniform(x_max / 2, x_max, (num_i_right, 1))
     ions.x = np.vstack((ions_left_x, ions_right_x))
 
-    ions.v = v_the * np.random.randn(num_ions, 3)
+    ions.v = v_the * np.random.randn(num_ions, dimV)
     # Left ions have E(v_x) = v_bulk, right ions have E(v_x) = 0: same as electrons
     ions.v[0:num_i_left, 0] += v_bulk
 

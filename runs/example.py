@@ -39,7 +39,7 @@ def main():
     v_th = 0.00000001  # Thermal speed
     pert_amp = 0.0001  # Perturbation amplitude
     mode = 3  # wave mode to activate
-    el, io = two_stream(num_particles, x_max, v_th, v_bulk, num_cells, pert_amp, mode)
+    el, io = two_stream(num_particles, x_max, v_th, v_bulk, num_cells, pert_amp, mode, 1)
 
     res = solver_1D.simulate(el, io, params)
 

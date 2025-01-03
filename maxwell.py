@@ -9,6 +9,8 @@ from grids import Grid1D, Grid1D3V, Grid2D
 from parameters import BoundaryCondition, Parameters
 from particles import Particles
 from physical_constants import *
+from scipy import sparse
+from scipy.sparse import linalg
 
 
 def poisson_solver(grid: Grid1D, electrons: Particles, ions: Particles, params: Parameters, first=False):
@@ -50,6 +52,12 @@ def naive_poisson_solver(grid: Grid1D, dx: float):
     # It might be possible to use higher order formulas to approximate the double integral?
     grid.phi.fill(0)
     grid.phi[1:] = -1 * np.cumsum(np.cumsum(grid.rho[:-1])) * dx**2 / eps_0
+
+
+# Place in maxwell.py
+def thomas_solver(grid: Grid1D, dx: float, tridiag):
+    dens_phi = linalg.spsolve(tridiag, -dx * dx * grid.rho[1:] / eps_0)
+    grid.phi = np.concatenate(([0], dens_phi))
 
 
 # -----------------------------------------------------

@@ -11,6 +11,7 @@ from particles import Particles
 from physical_constants import *
 from results import Results1D
 from time_constraint import calculate_dt_max
+from scipy import sparse
 
 
 def simulate(electrons: Particles, ions: Particles, params: Parameters):
@@ -41,6 +42,14 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
     t_start = time.time()
     t_last = t_start
 
+    # Creates sparse matrix for Thomas solver
+    main_diag = -2 * np.ones(grid.n_cells-1)
+    off_diag = 1 * np.ones(grid.n_cells-2)
+    tridiag = (np.diag(main_diag) + np.diag(off_diag, k=1) + np.diag(off_diag, k=-1))
+    if params.bc is not BoundaryCondition.Periodic:
+        tridiag[grid.n_cells-2, grid.n_cells-5:] = np.array([-1, 4, -5, 2])
+    tridiag = sparse.csr_matrix(tridiag)
+
     t = 0  # Time in the simulation
     step = 0  # Number of iterations
     # TODO: We need a proper definition of unit_time, iterating to t = 1 takes EXTREMELY long (using SOR)
@@ -53,7 +62,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
         t += dt
 
         # Solve the Poisson equation on the grid and set the values for rho, phi and E
-        maxwell.poisson_solver(grid, electrons, ions, params)
+        maxwell.thomas_solver(grid, params.dx, tridiag)
 
         # Calculate velocities v^(n+1/2) using Newton's equation
         newton.lorenz_force_1D(grid, electrons, dt)

@@ -8,7 +8,7 @@ sys.path.append("../")
 from initial_distributions import initialize_particles, two_stream
 from parameters import Parameters, BoundaryCondition
 from results import Results
-import solver_1D3V
+import solver_1D
 import visualizations.visualizations as vis
 
 
@@ -41,20 +41,19 @@ def main():
     mode = 3  # wave mode to activate
     el, io = two_stream(num_particles, x_max, v_th, v_bulk, num_cells, pert_amp, mode)
 
-    res = solver_1D3V.simulate(el, io, params)
+    res = solver_1D.simulate(el, io, params)
 
     # Define time steps to plot (start, middle, end)
     time_steps = [0, len(res.t) // 2, len(res.t) - 1]
 
-    # Plot results
+    # Plot results time_steps, x, F, name, t
     # Plot Ex and By
-    vis.field_ND(time_steps, res.x, res.E, 0, "Electric Field (Ex)", res.t)
-    vis.field_ND(time_steps, res.x, res.B, 1, "Magnetic Field (By)", res.t)
+    vis.field_1D(time_steps, res.x, res.E, "Electric Field (Ex)", res.t)
     vis.density_profiles_1D(time_steps, res.x, res.n_e, res.n_i, res.t)
     vis.energy_evolution(res.t, res.KE, res.PE, res.TE)
     # Problem: where does v_i go?? Maybe spread too thin so very narrow bins?
-    vis.velocity_profiles_ND(time_steps, res.v_e, res.v_i, res.t, 0)
-    vis.phase_space_ND(time_steps, res.x_e, res.v_e, res.x_i, res.v_i, res.t)
+    vis.velocity_profiles_1D(time_steps, res.v_e, res.v_i, res.t)
+    vis.phase_space_1D(time_steps, res.x_e, res.v_e, res.x_i, res.v_i, res.t)
     # vis.animate_phase_space(res.x_e, res.v_e, x_max, "phase_space_animation")
 
 

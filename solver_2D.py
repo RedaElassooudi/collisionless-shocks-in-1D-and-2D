@@ -1,3 +1,4 @@
+from datetime import datetime
 import time
 import numpy as np
 
@@ -126,6 +127,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
 
     print(f"{step:9}{t:12.4e}{dt:12.4e}{time.time() - t_start:21.3e}{TE:14.4e}")
     print("DONE!")
-    results.write(f"Results/{int(t_start)}")
-    print(f"Results saved in Results/{int(t_start)}/")
+    string_time = datetime.fromtimestamp(t_start).strftime("%Y-%m-%dT%Hh%Mm%Ss")
+    results.write(f"Results/{string_time}", params)
+    print(f"Results saved in Results/{string_time}/")
     return results

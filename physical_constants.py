@@ -6,9 +6,9 @@ m_i = 1836  # Normalized ion mass
 v_te = 1e-6  # Thermal velocity for electrons
 v_ti = 5e-7  # Thermal velocity for ions
 eps_0 = 1  # vacuum permitivity
-#if we set speed of ligth equal to 1 we find that vacuum permeability will also be 1 for eps_0 = 1
-c = 1 #should be changed but mu and eps should be carefully considered
-mu_0 = 1 / (eps_0 * c**2) #vacuum permeability in dimensinless units
+# if we set speed of ligth equal to 1 we find that vacuum permeability will also be 1 for eps_0 = 1
+c = 1  # should be changed but mu and eps should be carefully considered
+mu_0 = 1 / (eps_0 * c**2)  # vacuum permeability in dimensinless units
 
 # Using these units we have the following other important units
 # Length L: 1 = 3.54112824901163e-14 m  = mu_0 * e^2 / m_e

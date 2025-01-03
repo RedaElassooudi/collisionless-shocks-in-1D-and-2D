@@ -14,12 +14,12 @@ def advance_positions(particles: Particles, dt):
     particles.x += particles.v[:, 0 : particles.dimX] * dt
 
 
-def initialize_velocities_half_step_1D(grid: Grid1D, electrons: Particles, ions: Particles, params: Parameters, dt: float):
+def initialize_velocities_half_step_1D(grid: Grid1D, electrons: Particles, ions: Particles, params: Parameters, dt: float, tridiag):
     """
     Function to properly initialize velocities for the leapfrog scheme at t-dt/2.
     """
     # Calculate initial electric field
-    maxwell.poisson_solver(grid, electrons, ions, params, first=True)
+    maxwell.poisson_solver(grid, electrons, ions, params, tridiag, first=True)
     # Apply Lorenz force backwards in time to find v^(-1/2)
     lorenz_force_1D(grid, electrons, -dt / 2)
     lorenz_force_1D(grid, ions, -dt / 2)

@@ -13,7 +13,7 @@ from scipy import sparse
 from scipy.sparse import linalg
 
 
-def poisson_solver(grid: Grid1D, electrons: Particles, ions: Particles, params: Parameters, first=False):
+def poisson_solver(grid: Grid1D, electrons: Particles, ions: Particles, params: Parameters, tridiag, first=False):
     grid.set_densities(electrons, ions)
 
     # TODO: commented out the SOR solver so that we can have a result.
@@ -28,7 +28,7 @@ def poisson_solver(grid: Grid1D, electrons: Particles, ions: Particles, params: 
     # if first:
     #     naive_poisson_solver(grid, params.dx)
     # solve_poisson_sor(grid.phi, -grid.rho / eps_0, params.dx, params.bc, params.SOR_max_iter, params.SOR_tol, params.SOR_omega)
-    naive_poisson_solver(grid, params.dx)
+    thomas_solver(grid, params.dx, tridiag)
 
     # Electric field calculation
     # E_i = - (phi_i+1 - phi_i) / dx
@@ -58,6 +58,7 @@ def naive_poisson_solver(grid: Grid1D, dx: float):
 def thomas_solver(grid: Grid1D, dx: float, tridiag):
     dens_phi = linalg.spsolve(tridiag, -dx * dx * grid.rho[1:] / eps_0)
     grid.phi = np.concatenate(([0], dens_phi))
+
 
 
 # -----------------------------------------------------

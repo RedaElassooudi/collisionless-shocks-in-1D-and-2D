@@ -26,9 +26,17 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
     grid = Grid1D(params.x_max, params.dx)
     results = Results1D()
 
+    # Creates sparse matrix for Thomas solver
+    main_diag = -2 * np.ones(grid.n_cells-1)
+    off_diag = 1 * np.ones(grid.n_cells-2)
+    tridiag = (np.diag(main_diag) + np.diag(off_diag, k=1) + np.diag(off_diag, k=-1))
+    if params.bc is not BoundaryCondition.Periodic:
+        tridiag[grid.n_cells-2, grid.n_cells-5:] = np.array([-1, 4, -5, 2])
+    tridiag = sparse.csr_matrix(tridiag)
+
     max_v = max(np.max(np.abs(electrons.v)), np.max(np.abs(ions.v)))
     dt = calculate_dt_max(params.dx, max_v, electrons.qm, electrons.dimX, safety_factor=20)
-    newton.initialize_velocities_half_step_1D(grid, electrons, ions, params, dt)
+    newton.initialize_velocities_half_step_1D(grid, electrons, ions, params, dt, tridiag)
 
     # Save data at time = 0
     KE = electrons.kinetic_energy() + ions.kinetic_energy()
@@ -42,14 +50,6 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
     t_start = time.time()
     t_last = t_start
 
-    # Creates sparse matrix for Thomas solver
-    main_diag = -2 * np.ones(grid.n_cells-1)
-    off_diag = 1 * np.ones(grid.n_cells-2)
-    tridiag = (np.diag(main_diag) + np.diag(off_diag, k=1) + np.diag(off_diag, k=-1))
-    if params.bc is not BoundaryCondition.Periodic:
-        tridiag[grid.n_cells-2, grid.n_cells-5:] = np.array([-1, 4, -5, 2])
-    tridiag = sparse.csr_matrix(tridiag)
-
     t = 0  # Time in the simulation
     step = 0  # Number of iterations
     # TODO: We need a proper definition of unit_time, iterating to t = 1 takes EXTREMELY long (using SOR)
@@ -62,7 +62,7 @@ def simulate(electrons: Particles, ions: Particles, params: Parameters):
         t += dt
 
         # Solve the Poisson equation on the grid and set the values for rho, phi and E
-        maxwell.thomas_solver(grid, params.dx, tridiag)
+        maxwell.poisson_solver(grid, electrons, ions, params, tridiag)
 
         # Calculate velocities v^(n+1/2) using Newton's equation
         newton.lorenz_force_1D(grid, electrons, dt)
